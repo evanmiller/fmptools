@@ -17,6 +17,9 @@ typedef struct fmp_ctx_s {
     off_t   prev_sector_offset;
     off_t   next_sector_offset;
     off_t   sector_len_offset;
+
+    int     level;
+    unsigned char    xor_mask;
 } fmp_ctx_t;
 
 typedef enum {
@@ -84,35 +87,39 @@ void print_spaces(int level) {
     }
 }
 
-void handle_number(const unsigned char *p, int len, int code, int level) {
+const unsigned char *handle_number(const unsigned char *p, int len, int code, fmp_ctx_t *ctx) {
     int number = 0;
     for (int i=0; i<len; i++) {
         number = (number << 8) + p[i];
     }
-    print_spaces(level);
+    print_spaces(ctx->level);
     dprintf(STDERR_FILENO, "Number: %d", number);
     if (code != -1) {
         dprintf(STDERR_FILENO, " (Code %d)", code);
     }
     dprintf(STDERR_FILENO, "\n");
+    return p + len;
 }
 
-void handle_number_or_string(const unsigned char *p, int len, int code, int level) {
-    char string_buffer[256];
+const unsigned char *handle_number_or_string(const unsigned char *p, int len, int code, fmp_ctx_t *ctx) {
+    char string_buffer[1024];
     long number = -1;
     int could_be_text = 1;
     for (int i=0; i<len; i++) {
-        if (p[i] < 0x20 || p[i] >= 0x80) {
+        unsigned char c = p[i] ^ ctx->xor_mask;
+        if (c < 0x20 || c >= 0x80) {
             could_be_text = 0;
             break;
         }
     }
     if ((len == 1 || len == 2 || len == 4) && !could_be_text) {
-        return handle_number(p, len, code, level);
+        return handle_number(p, len, code, ctx);
     }
-    print_spaces(level);
+    print_spaces(ctx->level);
     if (could_be_text) {
-        memcpy(string_buffer, p, len);
+        for (int i=0; i<len; i++) {
+            string_buffer[i] = p[i] ^ ctx->xor_mask;
+        }
         string_buffer[len] = '\0';
         dprintf(STDERR_FILENO, "String: %s", string_buffer);
     } else {
@@ -122,11 +129,138 @@ void handle_number_or_string(const unsigned char *p, int len, int code, int leve
         dprintf(STDERR_FILENO, " (Code %d)", code);
     }
     dprintf(STDERR_FILENO, "\n");
+    return p + len;
+}
+
+fmp_error_t interpret_v7_codes_in_sector(const unsigned char *buffer, int skip, fmp_ctx_t *ctx) {
+    size_t full_data_size = ctx->sector_size;
+
+    if (ctx->sector_len_offset != -1) {
+        size_t data_len = (buffer[ctx->sector_len_offset] << 8) + buffer[ctx->sector_len_offset+1];
+        full_data_size = ctx->sector_head_len + data_len;
+    }
+
+    const unsigned char *p = buffer + ctx->sector_head_len + skip;
+    ctx->level = 0;
+    while (p < buffer + full_data_size) {
+        if (*p == 0x00) {
+            p++;
+            if (*p) {
+                handle_number(p, 1, -1, ctx);
+            }
+            p += 1;
+        } else if (*p == 0x01) {
+            p++;
+            p = handle_number(p, 2, -1, ctx);
+        } else if (*p == 0x02) {
+            p++;
+            p = handle_number(p, 1, -1, ctx);
+            p = handle_number(p, 1, -1, ctx);
+            p = handle_number(p, 1, -1, ctx);
+        } else if (*p == 0x03) {
+            p++;
+            p = handle_number_or_string(p, 1, -1, ctx);
+            p = handle_number_or_string(p, 4, -1, ctx);
+        } else if (*p == 0x04) {
+            p++;
+            int code = *p++;
+            p = handle_number_or_string(p, 6, code, ctx);
+        } else if (*p == 0x05) {
+            p++;
+            p = handle_number(p, 1, -1, ctx);
+            p = handle_number(p, 4, -1, ctx);
+            p = handle_number(p, 4, -1, ctx);
+        } else if (*p == 0x06) {
+            p++;
+            int code = *p++;
+            int len = *p++;
+            p = handle_number_or_string(p, len, code, ctx);
+        } else if (*p == 0x07) {
+            p++;
+            int code = *p++;
+            int len = (p[0] << 8) + p[1];
+            p += 2;
+            p = handle_number_or_string(p, len, code, ctx);
+        } else if (*p == 0x08) {
+            p++;
+            p = handle_number_or_string(p, 2, -1, ctx);
+        } else if (*p == 0x09) {
+            p++;
+            p += 3;
+        } else if (*p == 0x0E && *(p+1) == 0x00) {
+            p++;
+            p += 8;
+        } else if (*p == 0x0E && *(p+1) == 0xFF) {
+            p++;
+            p += 6;
+        } else if (*p == 0x0F && *(p+1) == 0x80) {
+            p += 2;
+            int code = *p++;
+            int len = (p[0] << 8) + p[1];
+            p += 2;
+            p = handle_number_or_string(p, len, code, ctx);
+        } else if (*p == 0x1A) {
+            p++;
+            int len = *p++;
+            p = handle_number_or_string(p, len, -1, ctx);
+            p = handle_number(p, 1, -1, ctx);
+            p = handle_number(p, 1, -1, ctx);
+        } else if (*p == 0x12 && *(p+1) == 0xD0) {
+            p += 2;
+            p = handle_number(p, 2, -1, ctx);
+            p = handle_number(p, 1, -1, ctx);
+            p = handle_number(p, 1, -1, ctx);
+        } else if (*p == 0x1F) {
+            p++;
+            int key_len = *p++;
+            p = handle_number_or_string(p, key_len, -1, ctx);
+            int val_len = (p[0] << 8) + p[1];
+            p += 2;
+            p = handle_number_or_string(p, val_len, -1, ctx);
+        } else if ((*p & 0xF0) == 0x10) {
+            p++;
+            int len = *p++;
+            p = handle_number_or_string(p, len, -1, ctx);
+            p = handle_number(p, 1, -1, ctx);
+            p = handle_number(p, 1, -1, ctx);
+            p = handle_number(p, 2, -1, ctx);
+        } else if (*p == 0x30 && (*(p+1) == 0x80 || *(p+1) == 0xD0)) {
+            p += 2;
+            p = handle_number_or_string(p, 2, -1, ctx);
+            ctx->level++;
+        } else if (*p == 0x20) {
+            p++;
+            if (*p == 0xFE && *(p+1) == 0x80) {
+                p += 9;
+            } else {
+                p = handle_number(p, 1, -1, ctx);
+            }
+            ctx->level++;
+        } else if (*p == 0x40) {
+            p++;
+            ctx->level--;
+        } else if (*p == 0x80) {
+            p++;
+        } else if (*p == 0x28 && (*(p+1) == 0x80 || *(p+1) == 0x00 || *(p+1) == 0xFF)) {
+            p += 2;
+            p = handle_number(p, 1, -1, ctx);
+            ctx->level++;
+        } else if (*p == 0x38) {
+            p++;
+            int len = *p++;
+            p = handle_number_or_string(p, len, -1, ctx);
+            ctx->level++;
+        } else {
+            dprintf(STDERR_FILENO, "Unrecognized code at byte #%ld: %02x\n", (p - buffer), *p);
+            return FMP_ERROR_UNRECOGNIZED_CODE;
+        }
+    }
+    return FMP_OK;
 }
 
 fmp_error_t interpret_codes_in_sector(const unsigned char *buffer, int skip, fmp_ctx_t *ctx) {
-    if (ctx->version == 7)
-        return FMP_OK;
+    if (ctx->version >= 7)
+        return interpret_v7_codes_in_sector(buffer, skip, ctx);
 
     size_t full_data_size = ctx->sector_size;
 
@@ -136,49 +270,43 @@ fmp_error_t interpret_codes_in_sector(const unsigned char *buffer, int skip, fmp
     }
 
     const unsigned char *p = buffer + ctx->sector_head_len + skip;
-    int level = 0;
     while (p < buffer + full_data_size) {
-        if (*p == 0x00 || *p == 0xFF) {
+        if (*p == 0x00 || (*p & 0xF0) == 0xF0) {
             break;
         } else if ((*p & 0xC0) == 0xC0) {
             int len = (*p & 0x0F);
             p++;
             if (len == 1) {
-                handle_number(p, len, -1, level);
-                level++;
+                p = handle_number(p, len, -1, ctx);
+                ctx->level++;
             } else if (len) {
-                handle_number_or_string(p, len, -1, level);
-                level++;
+                p = handle_number_or_string(p, len, -1, ctx);
+                ctx->level++;
             } else {
-                level--;
+                ctx->level--;
             }
-            p += len;
         } else if ((*p & 0x80) == 0x80) {
             int len = (*p & 0x0F);
             p++;
             if (len == 1) {
-                handle_number(p, len, -1, level);
+                p = handle_number(p, len, -1, ctx);
             } else {
-                handle_number_or_string(p, len, -1, level);
+                p = handle_number_or_string(p, len, -1, ctx);
             }
-            p += len;
         } else if (*p >= 0x40 && *p < 0x80) {
             int code = (*p & 0x0F);
             p += 1;
             int len = *p++;
-            handle_number_or_string(p, len, code, level);
-            p += len;
+            p = handle_number_or_string(p, len, code, ctx);
         } else if (*p == 0x01 && (*(p+1) & 0xF0) == 0xF0) {
             int code = 16 + (*(p+1) & 0x0F);
             p += 2;
             int len = *p++;
-            handle_number_or_string(p, len, code, level);
-            p += len;
+            p = handle_number_or_string(p, len, code, ctx);
         } else if (*p == 0x02 && (*(p+1) & 0xF0) == 0xF0  && (*(p+2) & 0xF0) == 0xF0) {
             p += 3;
             int len = *p++;
-            handle_number_or_string(p, len, -1, level);
-            p += len;
+            p = handle_number_or_string(p, len, -1, ctx);
             /*
         } else if (*p == 0x02 && *(p+1) == 0x00 && *(p+2) == 0x01) {
             p += 3;
@@ -188,13 +316,11 @@ fmp_error_t interpret_codes_in_sector(const unsigned char *buffer, int skip, fmp
             */
         } else if (*p < 0x20) {
             int len = *p++;
-            handle_number_or_string(p, len, -1, level);
-            p += len;
+            p = handle_number_or_string(p, len, -1, ctx);
         } else if (*p >= 0x20 && *p < 0x40) {
             p++;
             int len = *p++;
-            handle_number_or_string(p, len, -1, level);
-            p += len;
+            p = handle_number_or_string(p, len, -1, ctx);
         } else {
             dprintf(STDERR_FILENO, "Unrecognized code: %02x\n", *p);
             return FMP_ERROR_UNRECOGNIZED_CODE;
@@ -245,10 +371,11 @@ fmp_error_t process_file(char path[]) {
         // or 4096
         ctx->sector_size = 4096;
         ctx->version = 7;
+        ctx->xor_mask = 0x5A;
         ctx->prev_sector_offset = 6;
         ctx->next_sector_offset = 10;
         ctx->sector_len_offset = 14;
-        ctx->sector_head_len = 16;
+        ctx->sector_head_len = 20;
         /* Big-endian flag somewhere? */
     } else {
         ctx->prev_sector_offset = 4;
@@ -269,11 +396,19 @@ fmp_error_t process_file(char path[]) {
 
     if (ctx->sector_size == 1024) {
         copy_sector_to_stdout(sector_count++, ctx);
-    }
 
-    error = read_write_and_interpret(sector_count++, buffer, 6, ctx);
-    if (error != FMP_OK)
-        goto cleanup;
+        error = read_write_and_interpret(sector_count++, buffer, 6, ctx);
+        if (error != FMP_OK)
+            goto cleanup;
+    } else {
+        error = read_sector(sector_count++, buffer, ctx);
+        if (error != FMP_OK)
+            goto cleanup;
+
+        error = write_sector(buffer, ctx);
+        if (error != FMP_OK)
+            goto cleanup;
+    }
 
     last_sector = ((buffer[ctx->next_sector_offset] << 8) + buffer[ctx->next_sector_offset+1]) + ctx->sector_index_shift;
 
@@ -285,7 +420,11 @@ fmp_error_t process_file(char path[]) {
     do {
         dprintf(STDERR_FILENO, "Reading sector %d...\n", next_sector);
 
-        error = read_write_and_interpret(next_sector, buffer, (next_sector == 3 ? 16 : 0), ctx);
+        int skip = 0;
+        if (ctx->sector_size == 1024 && next_sector == 3) {
+            skip = 16;
+        }
+        error = read_write_and_interpret(next_sector, buffer, skip, ctx);
         if (error != FMP_OK)
             goto cleanup;
 
