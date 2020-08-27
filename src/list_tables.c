@@ -24,11 +24,11 @@ chunk_status_t handle_chunk_list_tables_v7(fmp_chunk_t *chunk, void *ctxp) {
         fmp_data_t *table_path = chunk->path[chunk->path_level-1];
         size_t table_index = path_value(chunk, table_path) - 128;
         fmp_table_array_t *array = ctx->array;
-        if (table_index > array->num_tables) {
-            size_t old_num_tables = array->num_tables;
-            array->num_tables = table_index;
-            array->tables = realloc(array->tables, array->num_tables * sizeof(fmp_table_t));
-            memset(&array->tables[old_num_tables], 0, (table_index - old_num_tables) * sizeof(fmp_table_t));
+        if (table_index > array->count) {
+            size_t old_count = array->count;
+            array->count = table_index;
+            array->tables = realloc(array->tables, array->count * sizeof(fmp_table_t));
+            memset(&array->tables[old_count], 0, (table_index - old_count) * sizeof(fmp_table_t));
         }
         fmp_table_t *current_table = array->tables + table_index - 1;
         if (chunk->ref_simple == 16) {
@@ -47,7 +47,7 @@ fmp_table_array_t *fmp_list_tables(fmp_file_t *file, fmp_error_t *errorCode) {
         fmp_list_tables_ctx_t ctx = { .array = array, .file = file };
         retval = process_blocks(file, NULL, handle_chunk_list_tables_v7, &ctx);
         int j=0;
-        for (int i=0; i<array->num_tables; i++) {
+        for (int i=0; i<array->count; i++) {
             if (array->tables[i].index) {
                 if (i!=j) {
                     memcpy(&array->tables[j], &array->tables[i], sizeof(fmp_table_t));
@@ -55,9 +55,9 @@ fmp_table_array_t *fmp_list_tables(fmp_file_t *file, fmp_error_t *errorCode) {
                 j++;
             }
         }
-        array->num_tables = j;
+        array->count = j;
     } else {
-        array->num_tables = 1;
+        array->count = 1;
         array->tables = calloc(1, sizeof(fmp_table_t));
         array->tables[0].index = 1;
         snprintf(array->tables[0].utf8_name, sizeof(array->tables[0].utf8_name),

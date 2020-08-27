@@ -38,8 +38,8 @@ typedef struct fmp_column_s {
 } fmp_column_t;
 
 typedef struct fmp_column_array_s {
-    size_t num_columns;
-    fmp_column_t columns[];
+    size_t count;
+    fmp_column_t *columns;
 } fmp_column_array_t;
 
 typedef struct fmp_table_s {
@@ -49,7 +49,7 @@ typedef struct fmp_table_s {
 } fmp_table_t;
 
 typedef struct fmp_table_array_s {
-    size_t num_tables;
+    size_t count;
     fmp_table_t *tables;
 } fmp_table_array_t;
 

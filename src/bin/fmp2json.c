@@ -49,11 +49,19 @@ int main(int argc, char *argv[]) {
     yajl_gen_config(ctx.g, yajl_gen_beautify, 1);
 
     yajl_gen_array_open(g);
-    for (int j=0; j<tables->num_tables; j++) {
+    for (int j=0; j<tables->count; j++) {
         fmp_table_t *table = &tables->tables[j];
         yajl_gen_map_open(g);
         yajl_gen_string(g, (const unsigned char *)"name", sizeof("name")-1);
         yajl_gen_string(g, (const unsigned char *)table->utf8_name, strlen(table->utf8_name));
+        yajl_gen_string(g, (const unsigned char *)"columns", sizeof("columns")-1);
+        yajl_gen_array_open(g);
+        fmp_column_array_t *columns = fmp_list_columns(file, table, &error);
+        for (int k=0; k<columns->count; k++) {
+            yajl_gen_string(g, (const unsigned char *)columns->columns[k].utf8_name,
+                    strlen(columns->columns[k].utf8_name));
+        }
+        yajl_gen_array_close(g);
         yajl_gen_string(g, (const unsigned char *)"values", sizeof("values")-1);
 
         yajl_gen_array_open(g);

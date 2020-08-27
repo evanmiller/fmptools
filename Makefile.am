@@ -27,6 +27,7 @@ libfmptools_la_SOURCES = \
 	src/block.c \
 	src/dump_file.c \
 	src/fmp.c \
+	src/list_columns.c \
 	src/list_tables.c \
 	src/read_values.c
 

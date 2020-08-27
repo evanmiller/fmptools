@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Error code: %d\n", error);
         return 1;
     }
-    for (int i=0; i<tables->num_tables; i++) {
+    for (int i=0; i<tables->count; i++) {
         fmp_table_t *table = &tables->tables[i];
         lxw_worksheet *ws = workbook_add_worksheet(wb, table->utf8_name);
         error = fmp_read_values(file, table, &handle_value, ws);
