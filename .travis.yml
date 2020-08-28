@@ -15,6 +15,7 @@ addons:
   homebrew:
     packages:
     - yajl
+    update: true
 
 before_script:
   - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then brew link --force gettext; fi
