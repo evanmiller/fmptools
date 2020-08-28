@@ -1,0 +1,26 @@
+language: c
+compiler:
+  - clang
+  - gcc
+
+os:
+  - linux
+  - osx
+
+addons:
+  apt:
+    packages:
+    - libyajl-dev
+    - libsqlite3-dev
+  homebrew:
+    packages:
+    - yajl
+
+before_script:
+  - autoreconf -i -f
+
+script:
+  - ./configure
+  - make
+  - ./fmp2json test/data/government.FP3 -
+  - ./fmp2sqlite test/data/government.FP3 government.sqlite
