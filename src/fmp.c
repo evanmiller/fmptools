@@ -209,25 +209,30 @@ fmp_error_t process_blocks(fmp_file_t *file,
 }
 
 fmp_file_t *fmp_open_file(const char *path, fmp_error_t *errorCode) {
+    fmp_error_t retval = FMP_OK;
+    fmp_file_t *file = NULL;
+    uint8_t *sector = NULL;
     FILE *stream = fopen(path, "r");
     if (!stream) {
-        if (errorCode)
-            *errorCode = FMP_ERROR_OPEN;
-        return NULL;
+        retval = FMP_ERROR_OPEN;
+        goto cleanup;
     }
-    fmp_file_t *file = calloc(1, sizeof(fmp_file_t));
+    file = calloc(1, sizeof(fmp_file_t));
     file->stream = stream;
 
     char *path_copy = strdup(path);
     snprintf(file->filename, sizeof(file->filename), "%s", basename(path_copy));
     free(path_copy);
 
-    fmp_error_t retval = read_header(file);
-    if (errorCode)
-        *errorCode = retval;
+    retval = read_header(file);
+    if (retval != FMP_OK)
+        goto cleanup;
 
-    uint8_t *sector = malloc(file->sector_size);
-    fread(sector, file->sector_size, 1, file->stream);
+    sector = malloc(file->sector_size);
+    if (!fread(sector, file->sector_size, 1, file->stream)) {
+        retval = FMP_ERROR_READ;
+        goto cleanup;
+    }
 
     fmp_block_t *block = new_block_from_sector(file, sector);
 
@@ -240,8 +245,18 @@ fmp_file_t *fmp_open_file(const char *path, fmp_error_t *errorCode) {
         file->blocks[index++] = new_block_from_sector(file, sector);
     }
 
+cleanup:
     free(sector);
 
+    if (retval != FMP_OK) {
+        if (file)
+            free(file);
+        if (stream)
+            fclose(stream);
+        if (errorCode)
+            *errorCode = retval;
+        return NULL;
+    }
     return file;
 }
 
