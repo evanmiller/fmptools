@@ -71,6 +71,9 @@ fmp_error_t read_header(fmp_file_t *ctx) {
         ctx->sector_index_shift = 1;
         ctx->converter = iconv_open("UTF-8", "MACROMAN");
     }
+    if (ctx->converter == (iconv_t)-1) {
+        return FMP_ERROR_UNSUPPORTED_CHARACTER_SET;
+    }
 
     if (buf[521] == 0x1E) {
         ctx->version_num = 12;
