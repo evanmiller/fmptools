@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttyes.h>
+#include <inttypes.h>
 
 #include "fmp.h"
 #include "fmp_internal.h"
