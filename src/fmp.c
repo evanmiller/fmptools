@@ -69,7 +69,7 @@ fmp_error_t read_header(fmp_file_t *ctx) {
         ctx->payload_len_offset = 12;
         ctx->sector_head_len = 14;
         ctx->sector_index_shift = 1;
-        ctx->converter = iconv_open("UTF-8", "MACROMAN");
+        ctx->converter = iconv_open("UTF-8", "MACINTOSH");
     }
     if (ctx->converter == (iconv_t)-1) {
         return FMP_ERROR_UNSUPPORTED_CHARACTER_SET;
