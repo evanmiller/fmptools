@@ -23,6 +23,7 @@ fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *val
             return FMP_HANDLER_ABORT;
         }
         sqlite3_reset(ctx->insert_stmt);
+        sqlite3_clear_bindings(ctx->insert_stmt);
     }
     int rc = sqlite3_bind_text(ctx->insert_stmt, column->index, value, strlen(value), SQLITE_TRANSIENT);
     if (rc != SQLITE_OK) {
@@ -88,12 +89,19 @@ int main(int argc, char *argv[]) {
         q += snprintf(q, sizeof(insert_query), "INSERT INTO %s (", table->utf8_name);
         for (int j=0; j<columns->count; j++) {
             fmp_column_t *column = &columns->columns[j];
-            p += snprintf(p, sizeof(create_query) - (p - create_query), "%s TEXT", column->utf8_name);
-            q += snprintf(q, sizeof(insert_query) - (q - insert_query), "%s", column->utf8_name);
+            char *colname = strdup(column->utf8_name);
+            size_t colname_len = strlen(colname);
+            for (int k=0; k<colname_len; k++) {
+                if (colname[k] == ' ')
+                    colname[k] = '_';
+            }
+            p += snprintf(p, sizeof(create_query) - (p - create_query), "%s TEXT", colname);
+            q += snprintf(q, sizeof(insert_query) - (q - insert_query), "%s", colname);
             if (j < columns->count - 1) {
                 p += snprintf(p, sizeof(create_query) - (p - create_query), ", ");
                 q += snprintf(q, sizeof(insert_query) - (q - insert_query), ", ");
             }
+            free(colname);
         }
         p += snprintf(p, sizeof(create_query) - (p - create_query), ");");
         q += snprintf(q, sizeof(insert_query) - (q - insert_query), ") VALUES (");
@@ -109,6 +117,7 @@ int main(int argc, char *argv[]) {
         rc = sqlite3_exec(db, create_query, NULL, NULL, &zErrMsg);
         if (rc != SQLITE_OK) {
             fprintf(stderr, "Error creating SQL table: %s\n", zErrMsg);
+            fprintf(stderr, "Statement was: %s\n", create_query);
             return 1;
         }
 

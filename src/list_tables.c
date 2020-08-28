@@ -62,6 +62,15 @@ fmp_table_array_t *fmp_list_tables(fmp_file_t *file, fmp_error_t *errorCode) {
         array->tables[0].index = 1;
         snprintf(array->tables[0].utf8_name, sizeof(array->tables[0].utf8_name),
                 "%s", file->filename);
+
+        // strip off extension
+        size_t len = strlen(array->tables[0].utf8_name);
+        for (int i=len-1; i>0; i--) {
+            if (array->tables[0].utf8_name[i] == '.') {
+                array->tables[0].utf8_name[i] = '\0';
+                break;
+            }
+        }
     }
 
     if (errorCode)
