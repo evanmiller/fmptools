@@ -90,7 +90,7 @@ fmp_column_array_t *fmp_list_columns(fmp_file_t *file, fmp_table_t *table, fmp_e
     for (int i=0; i<array->count; i++) {
         if (array->columns[i].index) {
             if (i!=j) {
-                memcpy(&array->columns[j], &array->columns[i], sizeof(fmp_column_t));
+                memmove(&array->columns[j], &array->columns[i], sizeof(fmp_column_t));
             }
             j++;
         }

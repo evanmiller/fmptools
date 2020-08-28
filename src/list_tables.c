@@ -50,7 +50,7 @@ fmp_table_array_t *fmp_list_tables(fmp_file_t *file, fmp_error_t *errorCode) {
         for (int i=0; i<array->count; i++) {
             if (array->tables[i].index) {
                 if (i!=j) {
-                    memcpy(&array->tables[j], &array->tables[i], sizeof(fmp_table_t));
+                    memmove(&array->tables[j], &array->tables[i], sizeof(fmp_table_t));
                 }
                 j++;
             }
