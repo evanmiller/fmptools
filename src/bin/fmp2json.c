@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
 #include <yajl/yajl_gen.h>
 
 #include "../fmp.h"
@@ -26,7 +27,7 @@ fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *val
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        printf("Usage: %s [input file] [output file]\n", argv[0]);
+        printf("Usage: %s [input file] [output file]\n", basename(argv[0]));
         exit(1);
     }
 
