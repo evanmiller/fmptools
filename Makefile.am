@@ -20,6 +20,13 @@ fmp2json_SOURCES = src/bin/fmp2json.c
 fmp2json_LDADD = libfmptools.la -lyajl
 endif
 
+if HAVE_SQLITE
+bin_PROGRAMS += fmp2sqlite
+
+fmp2sqlite_SOURCES = src/bin/fmp2sqlite.c
+fmp2sqlite_LDADD = libfmptools.la -lsqlite3
+endif
+
 fmpdump_SOURCES = src/bin/fmpdump.c
 fmpdump_LDADD = libfmptools.la
 
