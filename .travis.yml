@@ -15,6 +15,7 @@ addons:
   homebrew:
     packages:
     - yajl
+    - libxlsxwriter
     update: true
 
 before_script:
@@ -26,3 +27,4 @@ script:
   - make
   - ./fmp2json test/data/fp3/government.FP3 -
   - ./fmp2sqlite test/data/fp3/government.FP3 government.sqlite
+  - if [[ $TRAVIS_OS_NAME == 'osx' ]]; then ./fmp2excel test/data/fp3/government.FP3 government.xlsx; fi
