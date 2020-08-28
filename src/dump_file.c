@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttyes.h>
 
 #include "fmp.h"
 #include "fmp_internal.h"
@@ -17,7 +18,7 @@ void dump_data(fmp_chunk_t *chunk, fmp_data_t *data, fmp_dump_ctx_t *ctx) {
     size_t len = data->len;
     if (len == 1 || ((bytes[0] ^ ctx->xor_mask)  >= 0x80 && len <= 3 )) {
         uint64_t val = path_value(chunk, data);
-        printf("[%lld]", val);
+        printf("[%" PRIu64 "]", val);
     } else if (((bytes[0] ^ ctx->xor_mask) < 0x20 || (bytes[0] ^ ctx->xor_mask) >= 0x80) && len <= 4) {
         uint64_t val = bytes[0];
         int i=0;
@@ -25,7 +26,7 @@ void dump_data(fmp_chunk_t *chunk, fmp_data_t *data, fmp_dump_ctx_t *ctx) {
             val <<= 8;
             val += bytes[i];
         }
-        printf("[%lld]", val);
+        printf("[%" PRIu64 "]", val);
     } else {
         char *decoded_bytes = malloc(len);
         for (int i=0; i<len; i++) {
@@ -49,7 +50,7 @@ void dump_data(fmp_chunk_t *chunk, fmp_data_t *data, fmp_dump_ctx_t *ctx) {
 
 void dump_path_value(fmp_chunk_t *chunk, fmp_data_t *path, fmp_dump_ctx_t *ctx) {
     if (path->len <= 3) {
-        printf("[%llu]", path_value(chunk, path));
+        printf("[%" PRIu64 "]", path_value(chunk, path));
     } else {
         dump_data(chunk, path, ctx);
     }

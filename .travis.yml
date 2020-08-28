@@ -23,5 +23,5 @@ before_script:
 script:
   - ./configure
   - make
-  - ./fmp2json test/data/government.FP3 -
-  - ./fmp2sqlite test/data/government.FP3 government.sqlite
+  - ./fmp2json test/data/fp3/government.FP3 -
+  - ./fmp2sqlite test/data/fp3/government.FP3 government.sqlite
