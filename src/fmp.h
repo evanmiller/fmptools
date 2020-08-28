@@ -1,4 +1,5 @@
 #include <iconv.h>
+#include <stdint.h>
 
 typedef enum {
     FMP_OK = 0,
