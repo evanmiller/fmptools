@@ -49,7 +49,6 @@ fmp_error_t read_header(fmp_file_t *ctx) {
         return FMP_ERROR_READ;
 
     if (memcmp(buf, MAGICK, sizeof(MAGICK)-1)) {
-        fprintf(stderr, "Bad magic number!\n");
         return FMP_ERROR_BAD_MAGIC_NUMBER;
     }
 
@@ -221,6 +220,13 @@ static fmp_file_t *fmp_file_from_stream(FILE *stream, const char *filename, fmp_
     fmp_file_t *file = calloc(1, sizeof(fmp_file_t));
     file->stream = stream;
 
+    if (fseek(stream, 0, SEEK_END) == -1) {
+        retval = FMP_ERROR_SEEK;
+        goto cleanup;
+    }
+    file->file_size = ftello(stream);
+    rewind(stream);
+
     if (filename) 
         snprintf(file->filename, sizeof(file->filename), "%s", filename);
 
@@ -242,6 +248,12 @@ static fmp_file_t *fmp_file_from_stream(FILE *stream, const char *filename, fmp_
     if (!block)
         goto cleanup;
 
+    if (block->next_id == 0 ||
+        (block->next_id + 1 + (file->version_num < 7)) * file->sector_size != file->file_size) {
+        retval = FMP_ERROR_BAD_SECTOR_COUNT;
+        goto cleanup;
+    }
+
     file = realloc(file, sizeof(fmp_file_t) + block->next_id * sizeof(fmp_block_t *));
     if (!file) {
         retval = FMP_ERROR_MALLOC;
@@ -251,14 +263,14 @@ static fmp_file_t *fmp_file_from_stream(FILE *stream, const char *filename, fmp_
     file->blocks[0] = block;
 
     int index = 1;
-    while (fread(sector, file->sector_size, 1, file->stream)) {
+    while (fread(sector, file->sector_size, 1, file->stream) && index < file->num_blocks) {
         fmp_block_t *block = new_block_from_sector(file, sector, &retval);
         if (!block)
             goto cleanup;
         file->blocks[index++] = block;
     }
 
-    if (index != block->next_id)
+    if (index != file->num_blocks)
         retval = FMP_ERROR_BAD_SECTOR_COUNT;
 
 cleanup:

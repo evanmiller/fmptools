@@ -5,6 +5,7 @@ typedef enum {
     FMP_OK = 0,
     FMP_ERROR_OPEN,
     FMP_ERROR_READ,
+    FMP_ERROR_SEEK,
     FMP_ERROR_MALLOC,
     FMP_ERROR_NO_FMEMOPEN,
     FMP_ERROR_BAD_MAGIC_NUMBER,
@@ -95,6 +96,7 @@ typedef struct fmp_file_s {
     char version_string[10];
     char filename[64];
     int version_num;
+    size_t  file_size;
     size_t  sector_size;
     size_t  sector_index_shift;
     size_t  sector_head_len;
