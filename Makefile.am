@@ -6,6 +6,9 @@ bin_PROGRAMS =
 include_HEADERS = src/fmp.h
 noinst_HEADERS = src/fmp_internal.h
 
+EXTRA_PROGRAMS =
+AM_CFLAGS =
+
 if HAVE_XLSXWRITER
 bin_PROGRAMS += fmp2excel
 
@@ -39,3 +42,16 @@ libfmptools_la_SOURCES = \
 	src/read_values.c
 
 libfmptools_la_LIBADD = @LIBICONV@
+libfmptools_la_LDFLAGS =
+
+if FUZZER_ENABLED
+EXTRA_PROGRAMS += fuzz_fmp
+# Force C++ linking for fuzz target
+nodist_EXTRA_fuzz_fmp_SOURCES = dummy.cxx
+fuzz_fmp_SOURCES = src/fuzz/fuzz_fmp.c
+fuzz_fmp_LDFLAGS = -static
+fuzz_fmp_LDADD = libfmptools.la @LIB_FUZZING_ENGINE@
+
+AM_CFLAGS += -fsanitize=fuzzer-no-link -fsanitize=address -g
+libfmptools_la_LDFLAGS += -fsanitize=fuzzer -fsanitize=address
+endif

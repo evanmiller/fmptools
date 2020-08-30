@@ -50,7 +50,7 @@ chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
     column = &ctx->columns[column_index-1];
 
     if (column->index != ctx->last_column && ctx->long_string_used) {
-        if (ctx->handle_value(ctx->current_row,
+        if (ctx->handle_value && ctx->handle_value(ctx->current_row,
                     &ctx->columns[ctx->last_column-1],
                     ctx->long_string_buf, ctx->user_ctx) == FMP_HANDLER_ABORT)
             return CHUNK_ABORT;
@@ -72,7 +72,7 @@ chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
                 utf8_value, strlen(utf8_value));
         ctx->long_string_used += strlen(utf8_value);
         ctx->long_string_buf[ctx->long_string_used] = '\0';
-    } else {
+    } else if (ctx->handle_value) {
         if (ctx->handle_value(ctx->current_row, column, utf8_value, ctx->user_ctx) == FMP_HANDLER_ABORT)
             return CHUNK_ABORT;
     }
@@ -152,7 +152,7 @@ fmp_error_t fmp_read_values(fmp_file_t *file, fmp_table_t *table, fmp_value_hand
     ctx->file = file;
     ctx->user_ctx = user_ctx;
     fmp_error_t retval = process_blocks(file, NULL, handle_chunk_read_values, ctx);
-    if (ctx->long_string_used) {
+    if (ctx->long_string_used && ctx->handle_value) {
         ctx->handle_value(ctx->current_row, &ctx->columns[ctx->last_column-1],
                 ctx->long_string_buf, user_ctx);
         ctx->long_string_used = 0;

@@ -194,6 +194,7 @@ fmp_error_t process_block_v7(fmp_block_t *block) {
         }
         if (p > block->payload + block->payload_len) {
             debug("Bad block! Last code was 0x%02x\n", c);
+            return FMP_ERROR_DATA_EXCEEDS_SECTOR_SIZE;
         }
         if (last_chunk) {
             last_chunk->next = chunk;
@@ -288,21 +289,30 @@ fmp_error_t process_block_v3(fmp_block_t *block) {
     }
     if (p != block->payload + block->payload_len) {
         fprintf(stderr, "Bad block!\n");
+        retval = FMP_ERROR_BAD_SECTOR;
     }
     block->chunk = first_chunk;
     return retval;
 }
 
 fmp_error_t process_block(fmp_file_t *file, fmp_block_t *block) {
+    if (!block)
+        return FMP_ERROR_BAD_SECTOR;
+
     if (file->version_num >= 7)
         return process_block_v7(block);
     return process_block_v3(block);
 }
 
-fmp_block_t *new_block_from_sector(fmp_file_t *file, const uint8_t *sector) {
+fmp_block_t *new_block_from_sector(fmp_file_t *file, const uint8_t *sector, fmp_error_t *errorCode) {
     size_t payload_len = file->sector_size - file->sector_head_len;
     if (file->payload_len_offset != -1)
         payload_len = copy_int(&sector[file->payload_len_offset], 2);
+    if (payload_len > file->sector_size - file->sector_head_len) {
+        if (errorCode)
+            *errorCode = FMP_ERROR_BAD_SECTOR;
+        return NULL;
+    }
     fmp_block_t *block = calloc(1, sizeof(fmp_block_t) + payload_len);
     block->payload_len = payload_len;
     block->deleted = sector[0];

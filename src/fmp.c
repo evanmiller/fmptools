@@ -26,10 +26,12 @@ typedef struct fmp_ctx_s {
     void *user_ctx;
 } fmp_ctx_t;
 
-void copy_pascal_string(char *dst, size_t dst_len, const void *buf) {
-    const char *chars = (const char *)buf;
-    unsigned char len = chars[0];
-    memcpy(dst, &chars[1], len);
+static void copy_pascal_string(char *dst, size_t dst_len, const void *buf) {
+    const unsigned char *chars = (const unsigned char *)buf;
+    size_t len = *chars++;
+    if (len >= dst_len)
+        len = dst_len-1;
+    memcpy(dst, chars, len);
     dst[len] = '\0';
 }
 
@@ -201,7 +203,9 @@ fmp_error_t process_blocks(fmp_file_t *file,
     int next_block = 2;
     do {
         fmp_block_t *block = file->blocks[next_block-1];
-        process_block(file, block);
+        retval = process_block(file, block);
+        if (retval != FMP_OK)
+            break;
         block->this_id = next_block;
         if (!handle_block || handle_block(block, user_ctx))
             retval = process_chunk_chain(file, block->chunk, handle_chunk, user_ctx);
@@ -211,42 +215,51 @@ fmp_error_t process_blocks(fmp_file_t *file,
     return retval;
 }
 
-fmp_file_t *fmp_open_file(const char *path, fmp_error_t *errorCode) {
-    fmp_error_t retval = FMP_OK;
-    fmp_file_t *file = NULL;
+static fmp_file_t *fmp_file_from_stream(FILE *stream, const char *filename, fmp_error_t *errorCode) {
     uint8_t *sector = NULL;
-    FILE *stream = fopen(path, "r");
-    if (!stream) {
-        retval = FMP_ERROR_OPEN;
-        goto cleanup;
-    }
-    file = calloc(1, sizeof(fmp_file_t));
+    fmp_error_t retval = FMP_OK;
+    fmp_file_t *file = calloc(1, sizeof(fmp_file_t));
     file->stream = stream;
 
-    char *path_copy = strdup(path);
-    snprintf(file->filename, sizeof(file->filename), "%s", basename(path_copy));
-    free(path_copy);
+    if (filename) 
+        snprintf(file->filename, sizeof(file->filename), "%s", filename);
 
     retval = read_header(file);
     if (retval != FMP_OK)
         goto cleanup;
 
     sector = malloc(file->sector_size);
+    if (!sector) {
+        retval = FMP_ERROR_MALLOC;
+        goto cleanup;
+    }
     if (!fread(sector, file->sector_size, 1, file->stream)) {
         retval = FMP_ERROR_READ;
         goto cleanup;
     }
 
-    fmp_block_t *block = new_block_from_sector(file, sector);
+    fmp_block_t *block = new_block_from_sector(file, sector, &retval);
+    if (!block)
+        goto cleanup;
 
     file = realloc(file, sizeof(fmp_file_t) + block->next_id * sizeof(fmp_block_t *));
+    if (!file) {
+        retval = FMP_ERROR_MALLOC;
+        goto cleanup;
+    }
     file->num_blocks = block->next_id;
     file->blocks[0] = block;
 
     int index = 1;
     while (fread(sector, file->sector_size, 1, file->stream)) {
-        file->blocks[index++] = new_block_from_sector(file, sector);
+        fmp_block_t *block = new_block_from_sector(file, sector, &retval);
+        if (!block)
+            goto cleanup;
+        file->blocks[index++] = block;
     }
+
+    if (index != block->next_id)
+        retval = FMP_ERROR_BAD_SECTOR_COUNT;
 
 cleanup:
     free(sector);
@@ -260,6 +273,38 @@ cleanup:
             *errorCode = retval;
         return NULL;
     }
+    return file;
+}
+
+fmp_file_t *fmp_open_buffer(const void *buffer, size_t len, fmp_error_t *errorCode) {
+    FILE *stream = NULL;
+#ifdef HAVE_FMEMOPEN
+    stream = fmemopen((void *)buffer, len, "r");
+#else
+    if (errorCode)
+        *errorCode = FMP_ERROR_NO_FMEMOPEN;
+    return NULL;
+#endif
+    if (!stream) {
+        if (errorCode)
+            *errorCode = FMP_ERROR_OPEN;
+        return NULL;
+    }
+    return fmp_file_from_stream(stream, NULL, errorCode);
+}
+
+fmp_file_t *fmp_open_file(const char *path, fmp_error_t *errorCode) {
+    fmp_error_t retval = FMP_OK;
+    fmp_file_t *file = NULL;
+    FILE *stream = fopen(path, "r");
+    if (!stream) {
+        if (errorCode)
+            *errorCode = FMP_ERROR_OPEN;
+        return NULL;
+    }
+    char *path_copy = strdup(path);
+    file = fmp_file_from_stream(stream, basename(path_copy), errorCode);
+    free(path_copy);
     return file;
 }
 
