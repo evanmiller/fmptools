@@ -132,7 +132,11 @@ void convert(fmp_file_t *file, char *dst, size_t dst_len,
     if (file->xor_mask) {
         free(src);
     }
-    dst[dst_len-output_bytes_left] = '\0';
+    if (output_bytes_left) {
+        dst[dst_len-output_bytes_left] = '\0';
+    } else if (dst_len) {
+        dst[dst_len-1] = '\0';
+    }
 }
 
 int table_path_depth(fmp_chunk_t *chunk) {
@@ -188,6 +192,16 @@ fmp_error_t process_chunk_chain(fmp_file_t *file, fmp_chunk_t *chunk,
     return FMP_OK;
 }
 
+void free_chunk_chain(fmp_block_t *block) {
+    fmp_chunk_t *chunk = block->chunk;
+    while (chunk) {
+        fmp_chunk_t *next = chunk->next;
+        free(chunk);
+        chunk = next;
+    }
+    block->chunk = NULL;
+}
+
 fmp_error_t process_blocks(fmp_file_t *file,
         block_handler handle_block,
         chunk_handler handle_chunk,
@@ -200,16 +214,22 @@ fmp_error_t process_blocks(fmp_file_t *file,
         process_chunk_chain(file, block->chunk, handle_chunk, user_ctx);
         */
     int next_block = 2;
+    int *blocks_visited = calloc(file->num_blocks, sizeof(int));
     do {
         fmp_block_t *block = file->blocks[next_block-1];
         retval = process_block(file, block);
-        if (retval != FMP_OK)
+        blocks_visited[next_block-1] = 1;
+        if (retval != FMP_OK) {
             break;
+        }
         block->this_id = next_block;
         if (!handle_block || handle_block(block, user_ctx))
             retval = process_chunk_chain(file, block->chunk, handle_chunk, user_ctx);
         next_block = block->next_id;
-    } while (next_block != 0 && next_block - 1 < file->num_blocks && retval == FMP_OK);
+    } while (next_block != 0 && next_block - 1 < file->num_blocks &&
+            !blocks_visited[next_block-1] && retval == FMP_OK);
+
+    free(blocks_visited);
 
     return retval;
 }
@@ -261,6 +281,7 @@ static fmp_file_t *fmp_file_from_stream(FILE *stream, const char *filename, fmp_
     }
     file->num_blocks = block->next_id;
     file->blocks[0] = block;
+    memset(&file->blocks[1], 0, (block->next_id - 1) * sizeof(fmp_block_t *));
 
     int index = 1;
     while (fread(sector, file->sector_size, 1, file->stream) && index < file->num_blocks) {
@@ -278,9 +299,7 @@ cleanup:
 
     if (retval != FMP_OK) {
         if (file)
-            free(file);
-        if (stream)
-            fclose(stream);
+            fmp_close_file(file);
         if (errorCode)
             *errorCode = retval;
         return NULL;
@@ -324,7 +343,11 @@ void fmp_close_file(fmp_file_t *file) {
     if (file->stream)
         fclose(file->stream);
     for (int i=0; i<file->num_blocks; i++) {
-        free(file->blocks[i]);
+        fmp_block_t *block = file->blocks[i];
+        if (block) {
+            free_chunk_chain(block);
+            free(block);
+        }
     }
     free(file);
 }
