@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
         yajl_gen_map_close(g);
     }
     yajl_gen_array_close(g);
-    fmp_free_tables(tables):
+    fmp_free_tables(tables);
     fmp_close_file(file);
 
     FILE *stream = NULL;
