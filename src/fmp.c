@@ -238,6 +238,7 @@ static fmp_file_t *fmp_file_from_stream(FILE *stream, const char *filename, fmp_
     uint8_t *sector = NULL;
     fmp_error_t retval = FMP_OK;
     fmp_file_t *file = calloc(1, sizeof(fmp_file_t));
+    fmp_block_t *first_block = NULL;
     file->stream = stream;
 
     if (fseek(stream, 0, SEEK_END) == -1) {
@@ -264,24 +265,26 @@ static fmp_file_t *fmp_file_from_stream(FILE *stream, const char *filename, fmp_
         goto cleanup;
     }
 
-    fmp_block_t *block = new_block_from_sector(file, sector, &retval);
-    if (!block)
+    first_block = new_block_from_sector(file, sector, &retval);
+    if (!first_block)
         goto cleanup;
 
-    if (block->next_id == 0 ||
-        (block->next_id + 1 + (file->version_num < 7)) * file->sector_size != file->file_size) {
+    if (first_block->next_id == 0 ||
+        (first_block->next_id + 1 + (file->version_num < 7)) * file->sector_size != file->file_size) {
         retval = FMP_ERROR_BAD_SECTOR_COUNT;
         goto cleanup;
     }
 
-    file = realloc(file, sizeof(fmp_file_t) + block->next_id * sizeof(fmp_block_t *));
+    file = realloc(file, sizeof(fmp_file_t) + first_block->next_id * sizeof(fmp_block_t *));
     if (!file) {
         retval = FMP_ERROR_MALLOC;
         goto cleanup;
     }
-    file->num_blocks = block->next_id;
-    file->blocks[0] = block;
-    memset(&file->blocks[1], 0, (block->next_id - 1) * sizeof(fmp_block_t *));
+    file->num_blocks = first_block->next_id;
+    file->blocks[0] = first_block;
+    first_block = NULL;
+
+    memset(&file->blocks[1], 0, (file->num_blocks - 1) * sizeof(fmp_block_t *));
 
     int index = 1;
     while (fread(sector, file->sector_size, 1, file->stream) && index < file->num_blocks) {
@@ -296,6 +299,7 @@ static fmp_file_t *fmp_file_from_stream(FILE *stream, const char *filename, fmp_
 
 cleanup:
     free(sector);
+    free(first_block);
 
     if (retval != FMP_OK) {
         if (file)

@@ -76,7 +76,7 @@ fmp_table_array_t *fmp_list_tables(fmp_file_t *file, fmp_error_t *errorCode) {
     if (errorCode)
         *errorCode = retval;
     if (retval != FMP_OK) {
-        free(array);
+        fmp_free_tables(array);
         return NULL;
     }
     return array;

@@ -267,11 +267,9 @@ fmp_error_t process_block_v7(fmp_block_t *block) {
             continue;
         } else {
             debug(" **** UNRECOGNIZED CODE 0x%02x @ [%llu] *****\n", c, p - block->payload);
-            return FMP_ERROR_UNRECOGNIZED_CODE;
-        }
-        if (p > block->payload + block->payload_len) {
-            debug("Bad block! Last code was 0x%02x\n", c);
-            return FMP_ERROR_DATA_EXCEEDS_SECTOR_SIZE;
+            free(chunk);
+            retval = FMP_ERROR_UNRECOGNIZED_CODE;
+            break;
         }
         if (last_chunk) {
             last_chunk->next = chunk;
@@ -281,8 +279,11 @@ fmp_error_t process_block_v7(fmp_block_t *block) {
         }
         last_chunk = chunk;
     }
+    if (p > block->payload + block->payload_len) {
+        retval = FMP_ERROR_DATA_EXCEEDS_SECTOR_SIZE;
+    }
     block->chunk = first_chunk;
-    return FMP_OK;
+    return retval;
 }
 
 fmp_error_t process_block_v3(fmp_block_t *block) {
