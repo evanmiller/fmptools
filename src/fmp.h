@@ -106,7 +106,8 @@ typedef struct fmp_file_s {
     iconv_t converter;
     unsigned char    xor_mask;
     size_t path_level;
-    fmp_data_t *path[10];
+    size_t path_capacity;
+    fmp_data_t **path;
     size_t num_blocks;
     fmp_block_t *blocks[];
 } fmp_file_t;

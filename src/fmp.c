@@ -172,6 +172,8 @@ chunk_status_t process_chunk(fmp_file_t *file, fmp_chunk_t *chunk,
             file->path_level--;
     }
     if (chunk->type == FMP_CHUNK_PATH_PUSH) {
+        if (file->path_level + 1 > file->path_capacity)
+            file->path = realloc(file->path, (file->path_capacity *= 2) * sizeof(fmp_data_t *));
         file->path[file->path_level++] = &chunk->data;
     }
     return handle_chunk(chunk, user_ctx);
@@ -245,6 +247,8 @@ static fmp_file_t *fmp_file_from_stream(FILE *stream, const char *filename, fmp_
         retval = FMP_ERROR_SEEK;
         goto cleanup;
     }
+    file->path_capacity = 16;
+    file->path = calloc(file->path_capacity, sizeof(fmp_data_t *));
     file->file_size = ftello(stream);
     rewind(stream);
 
@@ -348,6 +352,8 @@ void fmp_close_file(fmp_file_t *file) {
         fclose(file->stream);
     if (file->converter)
         iconv_close(file->converter);
+    if (file->path)
+        free(file->path);
     for (int i=0; i<file->num_blocks; i++) {
         fmp_block_t *block = file->blocks[i];
         if (block) {
