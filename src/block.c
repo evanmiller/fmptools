@@ -143,7 +143,7 @@ fmp_error_t process_block_v7(fmp_block_t *block) {
             chunk->data.bytes = p;
             chunk->data.len = 3;
             p += chunk->data.len;
-        } else if (c <= 0x15) {
+        } else if (c > 0x10 && c <= 0x15) {
             chunk->type = FMP_CHUNK_DATA_SIMPLE;
             p++;
             chunk->data.bytes = p;
@@ -169,7 +169,7 @@ fmp_error_t process_block_v7(fmp_block_t *block) {
             chunk->data.bytes = p;
             chunk->data.len = 9;
             p += chunk->data.len;
-        } else if (c <= 0x1D) {
+        } else if (c > 0x19 && c <= 0x1D) {
             chunk->type = FMP_CHUNK_DATA_SIMPLE;
             p++;
             if (p >= end) {
