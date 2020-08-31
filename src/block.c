@@ -408,6 +408,9 @@ fmp_error_t process_block(fmp_file_t *file, fmp_block_t *block) {
     if (!block)
         return FMP_ERROR_BAD_SECTOR;
 
+    if (block->chunk) // already processed
+        return FMP_OK;
+
     if (file->version_num >= 7)
         return process_block_v7(block);
     return process_block_v3(block);

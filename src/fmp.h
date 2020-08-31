@@ -122,3 +122,5 @@ fmp_error_t fmp_read_values(fmp_file_t *file, fmp_table_t *table, fmp_value_hand
 fmp_error_t fmp_dump_file(fmp_file_t *file);
 
 void fmp_close_file(fmp_file_t *file);
+void fmp_free_tables(fmp_table_array_t *array);
+void fmp_free_columns(fmp_column_array_t *array);

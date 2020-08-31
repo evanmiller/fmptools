@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
             yajl_gen_string(g, (const unsigned char *)columns->columns[k].utf8_name,
                     strlen(columns->columns[k].utf8_name));
         }
+        fmp_free_columns(columns);
         yajl_gen_array_close(g);
         yajl_gen_string(g, (const unsigned char *)"values", sizeof("values")-1);
 
@@ -79,6 +80,8 @@ int main(int argc, char *argv[]) {
         yajl_gen_map_close(g);
     }
     yajl_gen_array_close(g);
+    fmp_free_tables(tables):
+    fmp_close_file(file);
 
     FILE *stream = NULL;
     if (strcmp(argv[2], "-")) {

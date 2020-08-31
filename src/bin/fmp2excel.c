@@ -42,6 +42,8 @@ int main(int argc, char *argv[]) {
         }
     }
     workbook_close(wb);
+    fmp_free_tables(tables);
+    fmp_close_file(file);
 
     return 0;
 }

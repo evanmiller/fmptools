@@ -157,6 +157,7 @@ fmp_error_t fmp_read_values(fmp_file_t *file, fmp_table_t *table, fmp_value_hand
                 ctx->long_string_buf, user_ctx);
         ctx->long_string_used = 0;
     }
+    free(ctx->columns);
     free(ctx);
     return retval;
 }

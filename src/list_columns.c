@@ -100,3 +100,10 @@ fmp_column_array_t *fmp_list_columns(fmp_file_t *file, fmp_table_t *table, fmp_e
         *errorCode = retval;
     return ctx.array;
 }
+
+void fmp_free_columns(fmp_column_array_t *array) {
+    if (array) {
+        free(array->columns);
+        free(array);
+    }
+}

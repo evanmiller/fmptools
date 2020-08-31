@@ -342,6 +342,8 @@ fmp_file_t *fmp_open_file(const char *path, fmp_error_t *errorCode) {
 void fmp_close_file(fmp_file_t *file) {
     if (file->stream)
         fclose(file->stream);
+    if (file->converter)
+        iconv_close(file->converter);
     for (int i=0; i<file->num_blocks; i++) {
         fmp_block_t *block = file->blocks[i];
         if (block) {

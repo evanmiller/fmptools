@@ -138,7 +138,13 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
         }
+        sqlite3_finalize(stmt);
+        fmp_free_columns(columns);
     }
+
+    fmp_free_tables(tables);
+    sqlite3_close(db);
+    fmp_close_file(file);
 
     return 0;
 }

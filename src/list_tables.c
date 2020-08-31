@@ -81,3 +81,10 @@ fmp_table_array_t *fmp_list_tables(fmp_file_t *file, fmp_error_t *errorCode) {
     }
     return array;
 }
+
+void fmp_free_tables(fmp_table_array_t *array) {
+    if (array) {
+        free(array->tables);
+        free(array);
+    }
+}
