@@ -6,7 +6,7 @@
 #include "fmp_internal.h"
 
 // big-endian
-uint64_t copy_int(const void *buf, size_t int_len) {
+static uint64_t copy_int(const void *buf, size_t int_len) {
     const uint8_t *chars = (const uint8_t *)buf;
     if (int_len == 1)
         return chars[0];
@@ -17,7 +17,7 @@ uint64_t copy_int(const void *buf, size_t int_len) {
     return 0;
 }
 
-fmp_error_t process_block_v7(fmp_block_t *block) {
+static fmp_error_t process_block_v7(fmp_block_t *block) {
     fmp_chunk_t *last_chunk = NULL;
     fmp_chunk_t *first_chunk = NULL;
     unsigned char *p = block->payload;
@@ -286,7 +286,7 @@ fmp_error_t process_block_v7(fmp_block_t *block) {
     return retval;
 }
 
-fmp_error_t process_block_v3(fmp_block_t *block) {
+static fmp_error_t process_block_v3(fmp_block_t *block) {
     fmp_chunk_t *last_chunk = NULL;
     fmp_chunk_t *first_chunk = NULL;
     unsigned char *p = block->payload;

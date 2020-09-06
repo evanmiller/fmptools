@@ -11,7 +11,7 @@ typedef struct fmp_list_columns_ctx_s {
     fmp_column_array_t *array;
 } fmp_list_columns_ctx_t;
 
-chunk_status_t handle_column(size_t column_index, fmp_data_t *name, fmp_list_columns_ctx_t *ctx) {
+static chunk_status_t handle_column(size_t column_index, fmp_data_t *name, fmp_list_columns_ctx_t *ctx) {
     fmp_column_array_t *array = ctx->array;
     if (column_index > array->count) {
         size_t old_num_columns = array->count;
@@ -27,7 +27,7 @@ chunk_status_t handle_column(size_t column_index, fmp_data_t *name, fmp_list_col
     return CHUNK_NEXT;
 }
 
-chunk_status_t handle_chunk_list_columns_v3(fmp_chunk_t *chunk, fmp_list_columns_ctx_t *ctx) {
+static chunk_status_t handle_chunk_list_columns_v3(fmp_chunk_t *chunk, fmp_list_columns_ctx_t *ctx) {
     if (path_value(chunk, chunk->path[0]) > 3)
         return CHUNK_DONE;
 
@@ -54,7 +54,7 @@ chunk_status_t handle_chunk_list_columns_v3(fmp_chunk_t *chunk, fmp_list_columns
     return CHUNK_NEXT;
 }
 
-chunk_status_t handle_chunk_list_columns_v7(fmp_chunk_t *chunk, fmp_list_columns_ctx_t *ctx) {
+static chunk_status_t handle_chunk_list_columns_v7(fmp_chunk_t *chunk, fmp_list_columns_ctx_t *ctx) {
     if (path_value(chunk, chunk->path[0]) > ctx->target_table_index + 128)
         return CHUNK_DONE;
     if (path_value(chunk, chunk->path[0]) < ctx->target_table_index + 128)
@@ -72,7 +72,7 @@ chunk_status_t handle_chunk_list_columns_v7(fmp_chunk_t *chunk, fmp_list_columns
     return CHUNK_NEXT;
 }
 
-chunk_status_t handle_chunk_list_columns(fmp_chunk_t *chunk, void *ctx) {
+static chunk_status_t handle_chunk_list_columns(fmp_chunk_t *chunk, void *ctx) {
     if (chunk->version_num >= 7)
         return handle_chunk_list_columns_v7(chunk, (fmp_list_columns_ctx_t *)ctx);
 

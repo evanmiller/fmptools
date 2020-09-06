@@ -10,7 +10,7 @@ typedef struct fmp_list_tables_ctx_s {
     fmp_table_array_t *array;
 } fmp_list_tables_ctx_t;
 
-chunk_status_t handle_chunk_list_tables_v7(fmp_chunk_t *chunk, void *ctxp) {
+static chunk_status_t handle_chunk_list_tables_v7(fmp_chunk_t *chunk, void *ctxp) {
     fmp_list_tables_ctx_t *ctx = (fmp_list_tables_ctx_t *)ctxp;
 
     if (path_value(chunk, chunk->path[0]) > 3)

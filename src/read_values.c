@@ -20,21 +20,21 @@ typedef struct fmp_read_values_ctx_s {
     void *user_ctx;
 } fmp_read_values_ctx_t;
 
-int path_is_long_string(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
+static int path_is_long_string(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
     return table_path_match_start2(chunk, 3, 5, ctx->last_row);
 }
 
-int path_row(fmp_chunk_t *chunk) {
+static int path_row(fmp_chunk_t *chunk) {
     if (chunk->version_num < 7)
         return path_value(chunk, chunk->path[1]);
     return path_value(chunk, chunk->path[2]);
 }
 
-int path_is_table_data(fmp_chunk_t *chunk) {
+static int path_is_table_data(fmp_chunk_t *chunk) {
     return table_path_match_start1(chunk, 2, 5);
 }
 
-chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
+static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
     fmp_column_t *column = NULL;
     int long_string = 0;
     size_t column_index = 0;
@@ -81,7 +81,7 @@ chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
     return CHUNK_NEXT;
 }
 
-chunk_status_t handle_chunk_read_values_v3(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
+static chunk_status_t handle_chunk_read_values_v3(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
     if (path_value(chunk, chunk->path[0]) > 5)
         return CHUNK_DONE;
 
@@ -112,7 +112,7 @@ chunk_status_t handle_chunk_read_values_v3(fmp_chunk_t *chunk, fmp_read_values_c
     return process_value(chunk, ctx);
 }
 
-chunk_status_t handle_chunk_read_values_v7(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
+static chunk_status_t handle_chunk_read_values_v7(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
     if (path_value(chunk, chunk->path[0]) > ctx->target_table_index + 128)
         return CHUNK_DONE;
     if (path_value(chunk, chunk->path[0]) < ctx->target_table_index + 128)
@@ -139,7 +139,7 @@ chunk_status_t handle_chunk_read_values_v7(fmp_chunk_t *chunk, fmp_read_values_c
     return process_value(chunk, ctx);
 }
 
-chunk_status_t handle_chunk_read_values(fmp_chunk_t *chunk, void *ctx) {
+static chunk_status_t handle_chunk_read_values(fmp_chunk_t *chunk, void *ctx) {
     if (chunk->version_num >= 7)
         return handle_chunk_read_values_v7(chunk, ctx);
     return handle_chunk_read_values_v3(chunk, ctx);

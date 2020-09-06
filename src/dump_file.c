@@ -12,7 +12,7 @@ typedef struct fmp_dump_ctx_s {
     iconv_t converter;
 } fmp_dump_ctx_t;
 
-void dump_data(fmp_chunk_t *chunk, fmp_data_t *data, fmp_dump_ctx_t *ctx) {
+static void dump_data(fmp_chunk_t *chunk, fmp_data_t *data, fmp_dump_ctx_t *ctx) {
     uint8_t *bytes = data->bytes;
     size_t len = data->len;
     if (len == 1 || ((bytes[0] ^ ctx->xor_mask)  >= 0x80 && len <= 3 )) {
@@ -47,7 +47,7 @@ void dump_data(fmp_chunk_t *chunk, fmp_data_t *data, fmp_dump_ctx_t *ctx) {
     }
 }
 
-void dump_path_value(fmp_chunk_t *chunk, fmp_data_t *path, fmp_dump_ctx_t *ctx) {
+static void dump_path_value(fmp_chunk_t *chunk, fmp_data_t *path, fmp_dump_ctx_t *ctx) {
     if (path->len <= 3) {
         printf("[%" PRIu64 "]", path_value(chunk, path));
     } else {
@@ -55,14 +55,14 @@ void dump_path_value(fmp_chunk_t *chunk, fmp_data_t *path, fmp_dump_ctx_t *ctx) 
     }
 }
 
-void dump_path(fmp_chunk_t *chunk, fmp_dump_ctx_t *ctx) {
+static void dump_path(fmp_chunk_t *chunk, fmp_dump_ctx_t *ctx) {
     for (int i=0; i<chunk->path_level; i++) {
         dump_path_value(chunk, chunk->path[i], ctx);
         printf(".");
     }
 }
 
-chunk_status_t dump_chunk(fmp_chunk_t *chunk, void *the_ctx) {
+static chunk_status_t dump_chunk(fmp_chunk_t *chunk, void *the_ctx) {
     fmp_dump_ctx_t *ctx = (fmp_dump_ctx_t *)the_ctx;
     if (chunk->type == FMP_CHUNK_PATH_POP) {
         ctx->did_print_current_path = 0;
@@ -110,7 +110,7 @@ chunk_status_t dump_chunk(fmp_chunk_t *chunk, void *the_ctx) {
     return CHUNK_NEXT;
 }
 
-int start_block(fmp_block_t *block, void *ctx) {
+static int start_block(fmp_block_t *block, void *ctx) {
     ((fmp_dump_ctx_t *)ctx)->did_print_current_path = 0;
     if (block->this_id == 0) {
         debug("=== [ INDEX BLOCK ] ===\n");
