@@ -4,7 +4,7 @@ lib_LTLIBRARIES = libfmptools.la
 noinst_PROGRAMS = fmpdump
 bin_PROGRAMS =
 include_HEADERS = src/fmp.h
-noinst_HEADERS = src/fmp_internal.h
+noinst_HEADERS = src/fmp_internal.h src/bin/usage.h
 
 EXTRA_PROGRAMS =
 AM_CFLAGS =
