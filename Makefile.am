@@ -42,7 +42,7 @@ libfmptools_la_SOURCES = \
 	src/read_values.c
 
 libfmptools_la_LIBADD = @LIBICONV@
-libfmptools_la_LDFLAGS =
+libfmptools_la_LDFLAGS = -export-symbols-regex '^fmp_'
 
 if FUZZER_ENABLED
 EXTRA_PROGRAMS += fuzz_fmp
