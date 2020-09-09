@@ -42,6 +42,7 @@ libfmptools_la_SOURCES = \
 	src/read_values.c
 
 libfmptools_la_LIBADD = @LIBICONV@
+libfmptools_la_CFLAGS = -Wall -Werror -pedantic-errors -std=c99
 libfmptools_la_LDFLAGS = -export-symbols-regex '^fmp_'
 
 if FUZZER_ENABLED
