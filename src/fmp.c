@@ -231,8 +231,8 @@ fmp_error_t process_blocks(fmp_file_t *file,
         chunk_handler handle_chunk,
         void *user_ctx) {
     fmp_error_t retval = FMP_OK;
-    fmp_block_t *block = file->blocks[0];
     /*
+    fmp_block_t *block = file->blocks[0];
     process_block(file, block);
     if (!handle_block || handle_block(block, user_ctx))
         process_chunk_chain(file, block->chunk, handle_chunk, user_ctx);
@@ -355,7 +355,6 @@ fmp_file_t *fmp_open_buffer(const void *buffer, size_t len, fmp_error_t *errorCo
 }
 
 fmp_file_t *fmp_open_file(const char *path, fmp_error_t *errorCode) {
-    fmp_error_t retval = FMP_OK;
     fmp_file_t *file = NULL;
     FILE *stream = fopen(path, "r");
     if (!stream) {
