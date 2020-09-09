@@ -26,6 +26,7 @@
 #include <xlsxwriter.h>
 
 #include "../fmp.h"
+#include "usage.h"
 
 fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *value, void *ctxp) {
     lxw_worksheet *ws = (lxw_worksheet *)ctxp;
@@ -38,8 +39,7 @@ fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *val
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        printf("Usage: %s [input file] [output file]\n", basename(argv[0]));
-        exit(1);
+        print_usage_and_exit(argc, argv);
     }
 
     fmp_error_t error = FMP_OK;

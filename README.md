@@ -5,10 +5,15 @@ FMP Tools
 
 Some tools for reading FileMaker Pro files (fp3, fp5, fp7, and fmp12).
 
-Building requires [autoconf](https://www.gnu.org/software/autoconf/):
+Building from the git source first requires [autoconf](https://www.gnu.org/software/autoconf/):
 
 ```
 autoreconf -i -f
+```
+
+Building from a release requires the usual:
+
+```
 ./configure
 make
 make install

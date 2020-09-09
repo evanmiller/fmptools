@@ -12,21 +12,21 @@ AM_CFLAGS =
 if HAVE_XLSXWRITER
 bin_PROGRAMS += fmp2excel
 
-fmp2excel_SOURCES = src/bin/fmp2excel.c
+fmp2excel_SOURCES = src/bin/fmp2excel.c src/bin/usage.c
 fmp2excel_LDADD = libfmptools.la -lxlsxwriter
 endif
 
 if HAVE_YAJL
 bin_PROGRAMS += fmp2json
 
-fmp2json_SOURCES = src/bin/fmp2json.c
+fmp2json_SOURCES = src/bin/fmp2json.c src/bin/usage.c
 fmp2json_LDADD = libfmptools.la -lyajl
 endif
 
 if HAVE_SQLITE
 bin_PROGRAMS += fmp2sqlite
 
-fmp2sqlite_SOURCES = src/bin/fmp2sqlite.c
+fmp2sqlite_SOURCES = src/bin/fmp2sqlite.c src/bin/usage.c
 fmp2sqlite_LDADD = libfmptools.la -lsqlite3
 endif
 

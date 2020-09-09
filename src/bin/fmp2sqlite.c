@@ -28,6 +28,7 @@
 #include <sqlite3.h>
 
 #include "../fmp.h"
+#include "usage.h"
 
 typedef struct fmp_sqlite_ctx_s {
     sqlite3 *db;
@@ -58,8 +59,7 @@ fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *val
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        printf("Usage: %s [input file] [output file]\n", basename(argv[0]));
-        exit(1);
+        print_usage_and_exit(argc, argv);
     }
 
     sqlite3 *db = NULL;
