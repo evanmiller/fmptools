@@ -20,6 +20,13 @@
  * THE SOFTWARE.
  */
 
+#ifndef INCLUDE_FMP_H
+#define INCLUDE_FMP_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <iconv.h>
 #include <stdint.h>
 
@@ -122,9 +129,9 @@ typedef struct fmp_file_s {
     size_t  sector_size;
     size_t  sector_index_shift;
     size_t  sector_head_len;
-    off_t   prev_sector_offset;
-    off_t   next_sector_offset;
-    off_t   payload_len_offset;
+    size_t  prev_sector_offset;
+    size_t  next_sector_offset;
+    size_t  payload_len_offset;
     iconv_t converter;
     unsigned char    xor_mask;
     size_t path_level;
@@ -147,3 +154,9 @@ fmp_error_t fmp_dump_file(fmp_file_t *file);
 void fmp_close_file(fmp_file_t *file);
 void fmp_free_tables(fmp_table_array_t *array);
 void fmp_free_columns(fmp_column_array_t *array);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* INCLUDE_FMP_H */
