@@ -1,3 +1,4 @@
+[![Build Status](https://github.com/evanmiller/fmptools/workflows/build/badge.svg)](https://github.com/evanmiller/fmptools/actions)
 [![Build Status](https://travis-ci.org/evanmiller/fmptools.svg?branch=master)](https://travis-ci.org/evanmiller/fmptools)
 
 FMP Tools
