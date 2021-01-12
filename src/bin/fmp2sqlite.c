@@ -107,8 +107,8 @@ int main(int argc, char *argv[]) {
         char insert_query[4096];
         char *p = create_query;
         char *q = insert_query;
-        p += snprintf(p, sizeof(create_query), "CREATE TABLE %s (", table->utf8_name);
-        q += snprintf(q, sizeof(insert_query), "INSERT INTO %s (", table->utf8_name);
+        p += snprintf(p, sizeof(create_query), "CREATE TABLE \"%s\" (", table->utf8_name);
+        q += snprintf(q, sizeof(insert_query), "INSERT INTO \"%s\" (", table->utf8_name);
         for (int j=0; j<columns->count; j++) {
             fmp_column_t *column = &columns->columns[j];
             char *colname = strdup(column->utf8_name);
@@ -117,8 +117,8 @@ int main(int argc, char *argv[]) {
                 if (colname[k] == ' ')
                     colname[k] = '_';
             }
-            p += snprintf(p, sizeof(create_query) - (p - create_query), "%s TEXT", colname);
-            q += snprintf(q, sizeof(insert_query) - (q - insert_query), "%s", colname);
+            p += snprintf(p, sizeof(create_query) - (p - create_query), "\"%s\" TEXT", colname);
+            q += snprintf(q, sizeof(insert_query) - (q - insert_query), "\"%s\"", colname);
             if (j < columns->count - 1) {
                 p += snprintf(p, sizeof(create_query) - (p - create_query), ", ");
                 q += snprintf(q, sizeof(insert_query) - (q - insert_query), ", ");
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
         }
         q += snprintf(q, sizeof(insert_query) - (q - insert_query), ");");
 
-        fprintf(stderr, "CREATE TABLE %s\n", table->utf8_name);
+        fprintf(stderr, "CREATE TABLE \"%s\"\n", table->utf8_name);
         rc = sqlite3_exec(db, create_query, NULL, NULL, &zErrMsg);
         if (rc != SQLITE_OK) {
             fprintf(stderr, "Error creating SQL table: %s\n", zErrMsg);
