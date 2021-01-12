@@ -43,7 +43,14 @@ typedef struct fmp_read_values_ctx_s {
 } fmp_read_values_ctx_t;
 
 static int path_is_long_string(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
-    return table_path_match_start2(chunk, 3, 5, ctx->last_row);
+    if (!table_path_match_start1(chunk, 3, 5))
+        return 0;
+    if (chunk->version_num < 7) {
+        uint64_t column_index = path_value(chunk, chunk->path[2]);
+        return path_is(chunk, chunk->path[1], ctx->last_row - (column_index == 1));
+    }
+    uint64_t column_index = path_value(chunk, chunk->path[3]);
+    return path_is(chunk, chunk->path[2], ctx->last_row + (column_index == 1));
 }
 
 static int path_row(fmp_chunk_t *chunk) {
@@ -61,6 +68,8 @@ static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *c
     int long_string = 0;
     size_t column_index = 0;
     if (path_is_long_string(chunk, ctx)) {
+        if (chunk->ref_simple == 0)
+            return CHUNK_NEXT; /* Rich-text formatting */
         long_string = 1;
         column_index = path_value(chunk, chunk->path[chunk->path_level-1]);
     } else if (path_is_table_data(chunk) && chunk->ref_simple <= ctx->num_columns) {
