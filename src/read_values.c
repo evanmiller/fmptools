@@ -92,7 +92,8 @@ static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *c
         ctx->current_row++;
     }
     char utf8_value[chunk->data.len*4+1];
-    convert(ctx->file, utf8_value, sizeof(utf8_value), chunk->data.bytes, chunk->data.len);
+    convert(ctx->file->converter, ctx->file->xor_mask,
+            utf8_value, sizeof(utf8_value), chunk->data.bytes, chunk->data.len);
     if (long_string) {
         if (ctx->long_string_buf == NULL ||
                 ctx->long_string_len < ctx->long_string_used + strlen(utf8_value) + 1) {
@@ -128,7 +129,8 @@ static chunk_status_t handle_chunk_read_values_v3(fmp_chunk_t *chunk, fmp_read_v
         }
         fmp_column_t *current_column = ctx->columns + column_index - 1;
         if (chunk->ref_simple == 1) {
-            convert(ctx->file, current_column->utf8_name, sizeof(current_column->utf8_name),
+            convert(ctx->file->converter, ctx->file->xor_mask,
+                    current_column->utf8_name, sizeof(current_column->utf8_name),
                     chunk->data.bytes, chunk->data.len);
             current_column->index = column_index;
         } else if (chunk->ref_simple == 2) {
@@ -160,7 +162,8 @@ static chunk_status_t handle_chunk_read_values_v7(fmp_chunk_t *chunk, fmp_read_v
         }
         fmp_column_t *current_column = ctx->columns + column_index - 1;
         if (chunk->ref_simple == 16) {
-            convert(ctx->file, current_column->utf8_name, sizeof(current_column->utf8_name),
+            convert(ctx->file->converter, ctx->file->xor_mask,
+                    current_column->utf8_name, sizeof(current_column->utf8_name),
                     chunk->data.bytes, chunk->data.len);
             current_column->index = column_index;
         }

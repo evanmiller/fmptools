@@ -49,23 +49,11 @@ static void dump_data(fmp_chunk_t *chunk, fmp_data_t *data, fmp_dump_ctx_t *ctx)
         }
         printf("[%" PRIu64 "]", val);
     } else {
-        char *decoded_bytes = malloc(len);
-        for (int i=0; i<len; i++) {
-            decoded_bytes[i] = bytes[i] ^ ctx->xor_mask;
-        }
-        char *input_bytes = decoded_bytes;
-        size_t input_bytes_left = len;
         size_t utf8_len = 4*len+1;
         char *utf8 = malloc(utf8_len);
-        char *output = utf8;
-        size_t output_bytes_left = utf8_len;
-        if (iconv(ctx->converter, &input_bytes, &input_bytes_left, &output, &output_bytes_left) == -1 || input_bytes_left != 0) {
-            printf("(%d bytes: \"%.*s\")", (int)len, (int)len, bytes);
-        } else {
-            utf8[4*len+1-output_bytes_left] = '\0';
-            printf("\"%s\"", utf8);
-        }
-        free(decoded_bytes);
+        convert(ctx->converter, ctx->xor_mask, utf8, utf8_len, bytes, len);
+        printf("\"%s\"", utf8);
+        free(utf8);
     }
 }
 

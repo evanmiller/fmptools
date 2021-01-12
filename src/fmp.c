@@ -77,14 +77,14 @@ fmp_error_t read_header(fmp_file_t *ctx) {
     if (memcmp(&buf[15], "HBAM7", 5) == 0) {
         // or 4096
         ctx->sector_size = 4096;
-        ctx->version_num = 7;
         ctx->xor_mask = 0x5A;
         ctx->prev_sector_offset = 4;
         ctx->next_sector_offset = 8;
         ctx->payload_len_offset = -1;
         ctx->sector_head_len = 20;
-        ctx->converter = iconv_open("UTF-8", "WINDOWS-1252");
+        ctx->version_num = (buf[521] == 0x1E) ? 12 : 7;
         /* Big-endian flag somewhere? */
+        /* Don't set ctx->converter; we use a custom decoder */
     } else {
         ctx->sector_size = 1024;
         ctx->prev_sector_offset = 2;
@@ -96,10 +96,6 @@ fmp_error_t read_header(fmp_file_t *ctx) {
     }
     if (ctx->converter == (iconv_t)-1) {
         return FMP_ERROR_UNSUPPORTED_CHARACTER_SET;
-    }
-
-    if (buf[521] == 0x1E) {
-        ctx->version_num = 12;
     }
 
     copy_pascal_string(ctx->version_string, sizeof(ctx->version_string), &buf[541]);
@@ -133,16 +129,16 @@ int path_is(fmp_chunk_t *chunk, fmp_data_t *path, uint64_t value) {
     return path_value(chunk, path) == value;
 }
 
-void convert(fmp_file_t *file, char *dst, size_t dst_len,
-        uint8_t *src, size_t src_len) {
+void convert(iconv_t converter, uint8_t xor_mask,
+        char *dst, size_t dst_len, uint8_t *src, size_t src_len) {
     char *input_bytes = (char *)src;
     char *output_bytes = dst;
     size_t input_bytes_left = src_len;
     size_t output_bytes_left = dst_len;
-    if (file->xor_mask) {
+    if (xor_mask) {
         input_bytes = malloc(input_bytes_left);
         for (int i=0; i<input_bytes_left; i++) {
-            input_bytes[i] = file->xor_mask ^ src[i];
+            input_bytes[i] = xor_mask ^ src[i];
         }
         src = (uint8_t *)input_bytes;
     }
@@ -150,14 +146,37 @@ void convert(fmp_file_t *file, char *dst, size_t dst_len,
         input_bytes++;
         input_bytes_left--;
     }
-    iconv(file->converter, &input_bytes, &input_bytes_left, &output_bytes, &output_bytes_left);
-    if (file->xor_mask) {
-        free(src);
+    if (converter) {
+        iconv(converter, &input_bytes, &input_bytes_left, &output_bytes, &output_bytes_left);
+        if (output_bytes_left) {
+            dst[dst_len-output_bytes_left] = '\0';
+        } else if (dst_len) {
+            dst[dst_len-1] = '\0';
+        }
+    } else {
+        for (int i=0; i<input_bytes_left; i++) {
+            unsigned char c = input_bytes[i];
+            /* Funky code page switching for non-Latin-1 characters */
+            if (c == 0x03 && ++i < input_bytes_left) { /* 0x03 0x60 => U+0160 */
+                *output_bytes++ = 0xC4 | ((input_bytes[i] & 0xC0) >> 6);
+                *output_bytes++ = 0x80 | (input_bytes[i] & 0x3F);
+            } else if (c == 0x05 && ++i < input_bytes_left) { /* 0x05 0x19 => U+2019 */
+                *output_bytes++ = 0xE2;
+                *output_bytes++ = 0x80 | ((input_bytes[i] & 0xC0) >> 6);
+                *output_bytes++ = 0x80 | (input_bytes[i] & 0x3F);
+            } else if (c & 0x80) { /* Latin-1 */
+                *output_bytes++ = 0xC0 | (c >> 6);
+                *output_bytes++ = 0x80 | (c & 0x3F);
+            } else if (c >= 0x20) {
+                *output_bytes++ = c;
+            } else {
+                (void)0;
+            }
+        }
+        *output_bytes++ = '\0';
     }
-    if (output_bytes_left) {
-        dst[dst_len-output_bytes_left] = '\0';
-    } else if (dst_len) {
-        dst[dst_len-1] = '\0';
+    if (xor_mask) {
+        free(src);
     }
 }
 
@@ -244,6 +263,12 @@ fmp_error_t process_blocks(fmp_file_t *file,
         retval = process_block(file, block);
         blocks_visited[next_block-1] = 1;
         if (retval != FMP_OK) {
+            /*
+            fprintf(stderr, "ERROR processing block, reporting partial results...\n");
+            block->this_id = next_block;
+            if (!handle_block || handle_block(block, user_ctx))
+                process_chunk_chain(file, block->chunk, handle_chunk, user_ctx);
+                */
             break;
         }
         block->this_id = next_block;

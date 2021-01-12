@@ -54,7 +54,8 @@ static chunk_status_t handle_chunk_list_tables_v7(fmp_chunk_t *chunk, void *ctxp
         }
         fmp_table_t *current_table = array->tables + table_index - 1;
         if (chunk->ref_simple == 16) {
-            convert(ctx->file, current_table->utf8_name, sizeof(current_table->utf8_name),
+            convert(ctx->file->converter, ctx->file->xor_mask,
+                    current_table->utf8_name, sizeof(current_table->utf8_name),
                     chunk->data.bytes, chunk->data.len);
             current_table->index = table_index;
         }

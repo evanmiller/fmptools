@@ -42,7 +42,8 @@ static chunk_status_t handle_column(size_t column_index, fmp_data_t *name, fmp_l
         memset(&array->columns[old_num_columns], 0, (column_index - old_num_columns) * sizeof(fmp_column_t));
     }
     fmp_column_t *current_column = array->columns + column_index - 1;
-    convert(ctx->file, current_column->utf8_name, sizeof(current_column->utf8_name),
+    convert(ctx->file->converter, ctx->file->xor_mask,
+            current_column->utf8_name, sizeof(current_column->utf8_name),
             name->bytes, name->len);
     current_column->index = column_index;
 
