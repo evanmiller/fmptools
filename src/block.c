@@ -401,6 +401,10 @@ static fmp_error_t process_block_v3(fmp_block_t *block) {
             }
             chunk->extended = 1;
         }
+        if (chunk->type == FMP_CHUNK_FIELD_REF_LONG && chunk->ref_long.len == 1) {
+            chunk->type = FMP_CHUNK_FIELD_REF_SIMPLE;
+            chunk->ref_simple = chunk->ref_long.bytes[0];
+        }
         if (last_chunk) {
             last_chunk->next = chunk;
         }
