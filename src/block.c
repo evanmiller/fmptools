@@ -70,7 +70,7 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             }
             chunk->ref_simple = *p++;
             chunk->data.bytes = p;
-            chunk->data.len = c == 0x01 ? 1 : 2*c-2;
+            chunk->data.len = (c == 0x01) + 2*(c-0x01);
             p += chunk->data.len;
         } else if (c == 0x06) {
             chunk->type = FMP_CHUNK_FIELD_REF_SIMPLE;
@@ -103,13 +103,7 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             chunk->data.bytes = p;
             chunk->data.len = 2;
             p += chunk->data.len;
-        } else if (c == 0x09) {
-            chunk->type = FMP_CHUNK_DATA_SIMPLE;
-            p++;
-            chunk->data.bytes = p;
-            chunk->data.len = 3;
-            p += chunk->data.len;
-        } else if (c <= 0x0B || (c == 0x0E && p[1] == 0xFF)) {
+        } else if (c == 0x0E && p[1] == 0xFF) {
             chunk->type = FMP_CHUNK_DATA_SIMPLE;
             p++;
             chunk->data.bytes = p;
@@ -126,7 +120,7 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             chunk->ref_simple = copy_int(p, 2);
             p += 2;
             chunk->data.bytes = p;
-            chunk->data.len = 8;
+            chunk->data.len = (c == 0x09) + 2*(c-0x09);
             p += chunk->data.len;
         } else if (c == 0x0E) {
             chunk->type = FMP_CHUNK_FIELD_REF_SIMPLE;
@@ -246,6 +240,17 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             }
             chunk->data.bytes = p;
             p += chunk->data.len;
+        } else if (c == 0x23) {
+            chunk->type = FMP_CHUNK_DATA_SIMPLE;
+            p++;
+            if (p >= end) {
+                retval = FMP_ERROR_DATA_EXCEEDS_SECTOR_SIZE;
+                free(chunk);
+                break;
+            }
+            chunk->data.len = *p++;
+            chunk->data.bytes = p;
+            p += chunk->data.len;
         } else if (c == 0x28) {
             chunk->type = FMP_CHUNK_PATH_PUSH;
             p++;
@@ -269,7 +274,7 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             chunk->data.len = *p++;
             chunk->data.bytes = p;
             p += chunk->data.len;
-        } else if (c == 0x40) {
+        } else if (c == 0x3d || c == 0x40) {
             chunk->type = FMP_CHUNK_PATH_POP;
             p++;
         } else if (c == 0x80) {
