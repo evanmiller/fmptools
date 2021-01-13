@@ -44,6 +44,10 @@ int main(int argc, char *argv[]) {
 
     fmp_error_t error = FMP_OK;
     lxw_workbook *wb = workbook_new(argv[2]);
+    if (!wb) {
+        fprintf(stderr, "Error opening workbook at %s\n", argv[2]);
+        return 1;
+    }
     fmp_file_t *file = fmp_open_file(argv[1], &error);
     if (!file) {
         fprintf(stderr, "Error code: %d\n", error);
@@ -57,6 +61,10 @@ int main(int argc, char *argv[]) {
     for (int i=0; i<tables->count; i++) {
         fmp_table_t *table = &tables->tables[i];
         lxw_worksheet *ws = workbook_add_worksheet(wb, table->utf8_name);
+        if (!ws) {
+            fprintf(stderr, "Error adding workbook named %s\n", table->utf8_name);
+            return 1;
+        }
         error = fmp_read_values(file, table, &handle_value, ws);
         if (error != FMP_OK) {
             fprintf(stderr, "Error code: %d\n", error);
