@@ -157,6 +157,7 @@ void convert(iconv_t converter, uint8_t xor_mask,
         for (int i=0; i<input_bytes_left; i++) {
             unsigned char c = input_bytes[i];
             /* Funky code page switching for non-Latin-1 characters */
+            /* These are educated guesses but may not correspond to reality */
             if (c == 0x03 && ++i < input_bytes_left) { /* 0x03 0x60 => U+0160 */
                 *output_bytes++ = 0xC4 | ((input_bytes[i] & 0xC0) >> 6);
                 *output_bytes++ = 0x80 | (input_bytes[i] & 0x3F);
@@ -164,6 +165,18 @@ void convert(iconv_t converter, uint8_t xor_mask,
                 *output_bytes++ = 0xE2;
                 *output_bytes++ = 0x80 | ((input_bytes[i] & 0xC0) >> 6);
                 *output_bytes++ = 0x80 | (input_bytes[i] & 0x3F);
+            } else if (c == 0x1B && ++i < input_bytes_left && (uint8_t)input_bytes[i] == 0xFB) {
+                /*
+                 * The GreekTest file has a series
+                 * 0x1B  0xFB  0xC1  0xB9
+                 * Not sure what letters they are, guessing alpha and omega
+                 */
+                /* 0xC1 => U+03B1 => CE B1 */
+                /* 0xB9 => U+03A9 => CE A9 */
+                while (++i < input_bytes_left && (input_bytes[i] & 0x80)) {
+                    *output_bytes++ = 0xCE;
+                    *output_bytes++ = (input_bytes[i] - 0x10);
+                }
             } else if (c & 0x80) { /* Latin-1 */
                 *output_bytes++ = 0xC0 | (c >> 6);
                 *output_bytes++ = 0x80 | (c & 0x3F);
