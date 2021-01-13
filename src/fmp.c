@@ -132,9 +132,7 @@ int path_is(fmp_chunk_t *chunk, fmp_data_t *path, uint64_t value) {
 void convert(iconv_t converter, uint8_t xor_mask,
         char *dst, size_t dst_len, uint8_t *src, size_t src_len) {
     char *input_bytes = (char *)src;
-    char *output_bytes = dst;
     size_t input_bytes_left = src_len;
-    size_t output_bytes_left = dst_len;
     if (xor_mask) {
         input_bytes = malloc(input_bytes_left);
         for (int i=0; i<input_bytes_left; i++) {
@@ -147,6 +145,8 @@ void convert(iconv_t converter, uint8_t xor_mask,
         input_bytes_left--;
     }
     if (converter) {
+        char *output_bytes = dst;
+        size_t output_bytes_left = dst_len;
         iconv(converter, &input_bytes, &input_bytes_left, &output_bytes, &output_bytes_left);
         if (output_bytes_left) {
             dst[dst_len-output_bytes_left] = '\0';
@@ -154,8 +154,9 @@ void convert(iconv_t converter, uint8_t xor_mask,
             dst[dst_len-1] = '\0';
         }
     } else {
+        uint8_t *output_bytes = (uint8_t *)dst;
         for (int i=0; i<input_bytes_left; i++) {
-            unsigned char c = input_bytes[i];
+            uint8_t c = input_bytes[i];
             /* Funky code page switching for non-Latin-1 characters */
             /* These are educated guesses but may not correspond to reality */
             if (c == 0x03 && ++i < input_bytes_left) { /* 0x03 0x60 => U+0160 */
