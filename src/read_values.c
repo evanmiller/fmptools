@@ -72,7 +72,8 @@ static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *c
             return CHUNK_NEXT; /* Rich-text formatting */
         long_string = 1;
         column_index = path_value(chunk, chunk->path[chunk->path_level-1]);
-    } else if (path_is_table_data(chunk) && chunk->ref_simple <= ctx->num_columns) {
+    } else if (path_is_table_data(chunk) && chunk->ref_simple <= ctx->num_columns &&
+               chunk->ref_simple != 252 /* Special metadata value? */) {
         column_index = chunk->ref_simple;
     }
     if (column_index == 0 || column_index > ctx->num_columns)

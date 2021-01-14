@@ -39,6 +39,15 @@ static uint64_t copy_int(const void *buf, size_t int_len) {
     return 0;
 }
 
+static uint64_t copy_path_int(const void *buf, size_t int_len) {
+    const uint8_t *chars = (const uint8_t *)buf;
+    if (int_len == 1)
+        return chars[0];
+    if (int_len == 2)
+        return 0x80 + ((chars[0] & 0x7F) << 8) + chars[1];
+    return 0;
+}
+
 static fmp_error_t process_block_v7(fmp_block_t *block) {
     fmp_chunk_t *last_chunk = NULL;
     fmp_chunk_t *first_chunk = NULL;
@@ -117,7 +126,7 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
                 free(chunk);
                 break;
             }
-            chunk->ref_simple = copy_int(p, 2);
+            chunk->ref_simple = copy_path_int(p, 2);
             p += 2;
             chunk->data.bytes = p;
             chunk->data.len = (c == 0x09) + 2*(c-0x09);
@@ -130,7 +139,7 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
                 free(chunk);
                 break;
             }
-            chunk->ref_simple = copy_int(p, 2);
+            chunk->ref_simple = copy_path_int(p, 2);
             p += 2;
             chunk->data.len = *p++;
             chunk->data.bytes = p;
