@@ -159,12 +159,12 @@ void convert(iconv_t converter, uint8_t xor_mask,
         uint8_t sticky_group = 0;
         for (int i=0; i<input_bytes_left; i++) {
             uint8_t c = input_bytes[i];
-            if (c < 0x10) {
+            if (!group && c < 0x10) {
             /* Funky code page switching for non-Latin-1 characters */
             /* These are educated guesses but may not correspond to reality */
                 group = c;
                 continue;
-            } else if (c == 0x1B && ++i < input_bytes_left) {
+            } else if (!group && c == 0x1B && ++i < input_bytes_left) {
                 sticky_group = (input_bytes[i] & 0x0F);
                 group = 0;
                 continue;
