@@ -22,12 +22,46 @@
 
 #include <sys/types.h>
 #include <stdint.h>
+#include <stdio.h>
 
-enum { SQ0 = 0x01, SQ1, SQ2, SQ3, SQ4, SQ5, SQ6, SQ7 };
-enum { SQU = 0x0E };
-enum { SCU = 0x0F };
-enum { SC0 = 0x10, SC1, SC2, SC3, SC4, SC5, SC6, SC7 };
-enum { SD0 = 0x18, SD1, SD2, SD3, SD4, SD5, SD6, SD7 };
+enum {
+    SQ0 = 0x01, SQ7 = 0x08,
+    SQU = 0x0E,
+    SCU = 0x0F,
+    SC0 = 0x10, SC7 = 0x17,
+    SD0 = 0x18, SD7 = 0x1F };
+
+enum {
+    UC0 = 0xE0, UC7 = 0x0E7,
+    UD0 = 0xE8, UD7 = 0xEF,
+    UQU = 0xF0,
+    UDX = 0xF1 };
+
+static uint16_t offset_table(uint8_t x) {
+    uint16_t offset = 0;
+    if (x > 0 && x < 0x68) {
+        offset = x*0x80;
+    } else if (x < 0xA8) {
+        offset = x*0x80 + 0xAC00;
+    } else if (x == 0xF9) {
+        offset = 0xC0;
+    } else if (x == 0xFA) {
+        offset = 0x0250;
+    } else if (x == 0xFB) {
+        offset = 0x0370;
+    } else if (x == 0xFC) {
+        offset = 0x0530;
+    } else if (x == 0xFD) {
+        offset = 0x3040;
+    } else if (x == 0xFE) {
+        offset = 0x30A0;
+    } else if (x == 0xFF) {
+        offset = 0xFF60;
+    } else {
+        /* Reserved */
+    }
+    return offset;
+}
 
 /* Implementation of https://www.unicode.org/reports/tr6/tr6-4.html */
 void convert_scsu_to_utf8(char *dst, size_t dst_len, uint8_t *src, size_t src_len) {
@@ -53,13 +87,32 @@ void convert_scsu_to_utf8(char *dst, size_t dst_len, uint8_t *src, size_t src_le
         0xFF00, /* Fullwidth ASCII */
     };
     uint8_t shift = 0;
+    uint8_t unicode = 0;
     uint8_t active_window = 0;
     for (int i=0; i<src_len; i++) {
         uint8_t c = src[i];
         uint16_t u = 0; // Unicode code point
-        if (shift) {
+        if (unicode) {
+            if (c == UQU && i + 2 < src_len) {
+                u = (src[i+1] << 8) + src[i+2];
+                i += 2;
+            } else if (c >= UC0 && c <= UC7) {
+                active_window = (c - UC0);
+                unicode = 0;
+                continue;
+            } else if (c >= UD0 && c <= UD7 && ++i < src_len) {
+                dynamic_window_offsets[active_window = (c - UD0)] = offset_table(src[i]);
+                unicode = 0;
+                continue;
+            } else if (++i < src_len) {
+                u = (c << 8) + src[i];
+            }
+        } else if (shift) {
             u = static_window_offsets[shift - SQ0] + c;
             shift = 0;
+        } else if (c == SCU) {
+            unicode = 1;
+            continue;
         } else if (c == SQU && i + 2 < src_len) {
             u = (src[i+1] << 8) + src[i+2];
             i += 2;
@@ -70,30 +123,7 @@ void convert_scsu_to_utf8(char *dst, size_t dst_len, uint8_t *src, size_t src_le
             active_window = (c - SC0);
             continue;
         } else if (c >= SD0 && c <= SD7 && ++i < src_len) {
-            uint8_t x = src[i];
-            uint16_t offset = 0;
-            if (x > 0 && x < 0x68) {
-                offset = x*0x80;
-            } else if (x < 0xA8) {
-                offset = x*0x80 + 0xAC00;
-            } else if (x == 0xF9) {
-                offset = 0xC0;
-            } else if (x == 0xFA) {
-                offset = 0x0250;
-            } else if (x == 0xFB) {
-                offset = 0x0370;
-            } else if (x == 0xFC) {
-                offset = 0x0530;
-            } else if (x == 0xFD) {
-                offset = 0x3040;
-            } else if (x == 0xFE) {
-                offset = 0x30A0;
-            } else if (x == 0xFF) {
-                offset = 0xFF60;
-            } else {
-                /* Reserved */
-            }
-            dynamic_window_offsets[active_window = (c - SD0)] = offset;
+            dynamic_window_offsets[active_window = (c - SD0)] = offset_table(src[i]);
             continue;
         } else if (c == 0x0A || c == 0x0D || c == 0x09) {
             u = ' '; /* Encode as space, hack */
