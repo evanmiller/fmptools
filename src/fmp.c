@@ -53,7 +53,10 @@ typedef struct fmp_ctx_s {
 } fmp_ctx_t;
 
 static void copy_fixed_string(char *dst, size_t dst_len, const void *buf, size_t buf_len) {
-    snprintf(dst, dst_len, "%*s", (int)buf_len, (const char *)buf);
+    if (buf_len > dst_len - 1)
+        buf_len = dst_len - 1;
+    memcpy(dst, buf, buf_len);
+    dst[buf_len] = '\0';
 }
 
 static void copy_pascal_string(char *dst, size_t dst_len, const void *buf) {
