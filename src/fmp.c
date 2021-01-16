@@ -159,17 +159,17 @@ void convert(iconv_t converter, uint8_t xor_mask,
         input_bytes++;
         input_bytes_left--;
     }
+    char *output_bytes = dst;
+    size_t output_bytes_left = dst_len;
     if (converter) {
-        char *output_bytes = dst;
-        size_t output_bytes_left = dst_len;
         iconv(converter, &input_bytes, &input_bytes_left, &output_bytes, &output_bytes_left);
-        if (output_bytes_left) {
-            dst[dst_len-output_bytes_left] = '\0';
-        } else if (dst_len) {
-            dst[dst_len-1] = '\0';
-        }
     } else {
-        convert_scsu_to_utf8(dst, dst_len, (const uint8_t *)input_bytes, input_bytes_left);
+        convert_scsu_to_utf8(&input_bytes, &input_bytes_left, &output_bytes, &output_bytes_left);
+    }
+    if (output_bytes_left) {
+        dst[dst_len-output_bytes_left] = '\0';
+    } else if (dst_len) {
+        dst[dst_len-1] = '\0';
     }
     if (xor_mask) {
         free(src);
