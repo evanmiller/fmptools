@@ -20,6 +20,10 @@
  * THE SOFTWARE.
  */
 
+#define __USE_XOPEN
+#include <time.h>
+#undef __USE_XOPEN
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
