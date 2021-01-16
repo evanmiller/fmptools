@@ -20,7 +20,8 @@
  * THE SOFTWARE.
  */
 
-#define _XOPEN_SOURCE 600
+#define _XOPEN_SOURCE 600 /* strptime */
+#define _POSIX_C_SOURCE 200809L /* fmemopen */
 #include <time.h>
 
 #include <fcntl.h>
