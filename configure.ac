@@ -10,7 +10,7 @@ AC_PROG_CXX
 
 AM_ICONV
 
-AC_CHECK_FUNC(fmemopen,[ AC_DEFINE(HAVE_FMEMOPEN, 1, [fmemopen check]) ])
+AC_CHECK_FUNCS(strptime fmemopen)
 
 AC_CHECK_LIB([xlsxwriter], [workbook_new], [true], [false])
 AM_CONDITIONAL([HAVE_XLSXWRITER], test "$ac_cv_lib_xlsxwriter_workbook_new" = yes)

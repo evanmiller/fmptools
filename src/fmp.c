@@ -20,9 +20,6 @@
  * THE SOFTWARE.
  */
 
-#define _XOPEN_SOURCE /* for strptime */
-#include <time.h>
-
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -106,7 +103,9 @@ fmp_error_t read_header(fmp_file_t *ctx) {
     }
 
     copy_fixed_string(ctx->version_date_string, sizeof(ctx->version_date_string), &buf[531], 6);
+#ifdef HAVE_STRPTIME
     strptime(ctx->version_date_string, "%d%b%y", &ctx->version_date);
+#endif
     copy_pascal_string(ctx->version_string, sizeof(ctx->version_string), &buf[541]);
 
     // Throwaway sector
