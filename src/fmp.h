@@ -29,7 +29,6 @@ extern "C" {
 
 #include <iconv.h>
 #include <stdint.h>
-#define _XOPEN_SOURCE /* for strptime */
 #include <time.h>
 
 typedef enum {

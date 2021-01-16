@@ -20,6 +20,9 @@
  * THE SOFTWARE.
  */
 
+#define _XOPEN_SOURCE /* for strptime */
+#include <time.h>
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -49,7 +52,7 @@ typedef struct fmp_ctx_s {
 } fmp_ctx_t;
 
 static void copy_fixed_string(char *dst, size_t dst_len, const void *buf, size_t buf_len) {
-    snprintf(dst, dst_len, "%*s", (int)buf_len, buf);
+    snprintf(dst, dst_len, "%*s", (int)buf_len, (const char *)buf);
 }
 
 static void copy_pascal_string(char *dst, size_t dst_len, const void *buf) {
