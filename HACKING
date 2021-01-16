@@ -1,0 +1,445 @@
+The FileMaker Pro File Format
+--
+
+FileMaker Pro is a consumer-grade database program that uses a binary,
+proprietary file format for storing tabular and non-tabular data. This
+file describes the knowledge necessary to extract tabular data from files
+with extension fp3, fp5, fp7, or fmp12.
+
+There are two basic kinds of FileMaker files, fp3/fp5 and fp7/fmp12. The
+two varieties have a similar overall structure and design philosophy but are
+otherwise incompatible. The rest of this document will describe their
+respective layouts and refer to them by their latest incarnations, fp5 and
+fmp12. It is based on the fp5dump project combined with my own efforts.
+The fp5dump project is here:
+
+https://github.com/qwesda/fp5dump
+
+The source code has more information about the fp5 type than you will find in
+here. I welcome any attempts to merge that information into this document.
+
+
+Preliminaries: Text Encoding
+==
+
+Text data in fp5 files use the native character encoding of the machine that
+created them; in most cases, this encoding is MacRoman. iconv can be used to
+convert this text data to a more modern encoding, e.g. UTF-8.
+
+The story with fmp12 is more complicated. FileMaker began supporting Unicode
+characters before UTF-8 achieved widespread popularity, and appears to use a
+custom multibyte encoding scheme, perhaps inspired by the Lotus Multi-Byte
+Character Set.
+
+As best as I can discern, fmp12 files begin in Latin-1 (ISO-8859-1), but switch
+to a custom encoder when an ASCII control byte (unsigned value less than 0x20)
+is encountered. I have been able to confirm the function of the following two
+"switch" bytes:
+
+  0x03 - The next byte is a Unicode code point, offset by 256  (= 0x0100)
+  0x05 - The next byte is a Unicode code point, offset by 8192 (= 0x2000)
+
+For example, the hexadecimal byte sequence
+
+  03 60
+
+translates to Unicode code point 0x60 + 0x0100 = U+0160 (LATIN CAPITAL LETTER S
+WITH CARON).
+
+The full encoding scheme may become clear with more sample files.
+
+
+Preliminaries: Integer Encoding
+==
+
+Most integer data (e.g. lengths) are encoded big-endian. However, certain
+values appear to use a quasi-variable-length encoding. The encoding was fully
+variable length in fp5, but seems to have been modified in fmp12. For reasons
+that will become clear later, these will be referred to as "path integers" that
+consist of one to three bytes.
+
+In all cases, the actual length of the integer can be determined from context,
+but they seem designed in a way that they self-report their length, similar to
+UTF-8 sequences. This feature is not necessary to parse them, so for simplicity
+the sequences will be described assuming the total length is known in advance.
+
+One byte integers have a range of 0 - 127, with the highest bit ignored.
+
+Two byte integers have a range of 128 - 65536. Ignore the highest bit of the first
+byte, treat the remaining 15 bits as a big-endian number, and add 128.
+
+[fp5 only] Three byte integers have a range of 49152 and up. Ignore the highest two
+bits of the first byte, treat the remaining 22 bits as a big-endian number, and
+add 0xC000.
+
+[fmp12 only] Three byte integers have a range of 128 and up. Ignore the first
+byte and add 128 to the second two bytes, treated as a big-endian number.
+
+
+File Structure
+==
+
+Files consist of a header sector followed by one or more body sectors. Each
+sector contains 1024 bytes (fp5) or 4096 bytes (fmp12). In fp5 files, the first
+body sector can be ignored, with the "real" processing starting at offset 2048.
+
+
+Header Structure
+==
+
+The header begins with a 15-byte magic number:
+
+     00 01 00 00  00 02 00 01  00 05 00 02  00 02 C0
+
+In fmp12, the magic number is followed by the ASCII sequence "HBAM7". This
+sequence can be used to distinguish fp5 files from fmp12 files.
+
+The name of the software that created the file can be found at byte offset
+541 in the header. This string is a Pascal string, consisting of a one-byte
+length at offset 541 followed by an ASCII, non-terminated string, usually
+of the form "File Maker Pro X.0", where X is the version number.
+
+
+Sector Structure
+==
+
+Sectors may be unordered; they are arranged as a doubly linked list, and
+contain the ID of the previous sector as well as the next sector in the list.
+By following the linked list from the beginning, you can traverse the data in
+order.
+
+fp5 sector layout:
+
+    Offset  Length  Value
+    0       1       Deleted? 1=Yes 0=No
+    1       1       Level (Integer)
+    2       4       Previous Sector ID (Integer)
+    6       4       Next Sector ID (Integer)
+    12      2       Payload Length = N (Integer)
+    14      N       Payload
+
+fmp12 sector layout:
+
+    Offset  Length  Value
+    0       1       Deleted? 1=Yes 0=No
+    1       1       Level = Integer
+    4       4       Previous Sector ID = Integer
+    8       4       Next Sector ID = Integer
+    20      4076    Payload
+
+The "Payload" is a byte-code stream that can be used to construct a series
+of data chunks. For our purpoes, there are six kinds of chunks:
+
+* Path "push" operation (integer or byte sequence)
+* Path "pop" operation
+* Simple data (byte sequence)
+* Segmented data (segment index + byte sequence)
+* Simple key-value pair (integer => byte sequence)
+* Long key-value pair (byte sequence => byte sequence)
+
+The path operations define the logical position of the other kinds of data,
+and are central to extracting data from the file. It is a primitive sort of
+"file system" whose "folders" are usually (but not always) integers.
+
+For example, the file may "push" the numbers 3, 1, and 5 onto the path, in
+which case the next piece of data will have a path address of [3].[1].[5].
+After a "pop" operation, the next piece of data will have the address [3].[1],
+and so on.
+
+A "simple data" chunk is just a sequence of bytes; its path will determine how
+to interpret its contents. Most byte sequences in fmp12 need to be "decrypted"
+by XOR'ing every byte with the hex value 0x5A.
+
+Segmented data refers to data that does not fit into a single chunk, or even
+in a single block. Typically, large strings or objects are split into 1000-byte
+segments that share a path. Each segmented data chunk includes a sequential index
+that can be used to reconstruct the large object.
+
+Key-value pairs are the most common kind of chunk; multiple key-value pairs
+with the same path can represent associative arrays or records. The keys may be
+integers or strings (but usually integers), and the values are byte sequences.
+
+The "Codes" sections will describe the byte codes that can be used to decode
+the six chunk types. By implementing them, any FileMaker file can be read
+into memory. The "Path Structure" sections will describe how to convert these
+raw chunks into meaningful data structures.
+
+
+fp5 Codes
+==
+
+Each chunk can usually be identified by its first byte, although in a few cases
+examining the second byte is necessary.
+
+The possible chunk types and structures in fp5 files are:
+
+
+Simple key-value
+~~
+
+    Offset  Length  Value
+    0       1       0x00
+    1       1       N = Length (Integer)
+    2       N       Value
+
+    Key = 0x00 (Integer)
+
+
+    Offset  Length  Value
+    0       1       0x40 <= C <= 0x7F
+    1       1       N = Length (Integer)
+    2       N       Value (Bytes)
+
+    Key = C - 0x40 (Integer)
+
+
+    Offset  Length  Value
+    0       2       0xFF (0x40 <= C <= 0x80)
+    2       C-0x40  Key (Bytes)       
+    C-0x3E  2       N = Length (Integer)
+    C-0x3C  N       Value (Bytes)
+
+
+Long key-value
+~~
+
+    Offset  Length  Value
+    0       1       0x01 <= C <= 0x3F
+    1       1       K = Key Length (Integer)
+    2       K       Key (Bytes)     
+    2+K     1       N = Length (Integer)
+    2+K+1   N       Value (Bytes)
+
+
+    Offset  Length  Value
+    0       2       0xFF (0x01 <= K <= 0x04)
+    2       K       Key (Bytes)       
+    2+C     2       N = Length (Integer)
+    2+C+2   N       Value (Bytes)
+
+
+Simple data
+~~
+
+    Offset  Length  Value
+    0       1       0x80 <= C <= 0xBF
+    1       C-0x80  Value (Bytes)
+
+
+Path pop
+~~
+
+    Offset  Length  Value
+    0       1       0xC0
+
+
+Path push
+~~
+
+    Offset  Length  Value
+    0       1       0xC1 <= C <= 0xFE
+    1       C-0xC0  Value (Bytes)
+
+
+fmp12 Codes
+==
+
+As with the fp5 codes, ach chunk can usually be identified by its first byte,
+although in a few cases examining the second byte is necessary.
+
+The possible chunk types and structures are:
+
+
+Simple data
+~~
+
+    Offset  Length  Value
+    0       1       0x00
+    1       1       Bytes
+
+    Offset  Length  Value
+    0       1       0x08
+    1       2       Value (Bytes)
+
+    Offset  Length  Value
+    0       2       0x0E 0xFF
+    2       5       Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x10
+    1       3       Value (Bytes)
+
+    Offset  Length          Value
+    0       1               0x11 <= C <= 0x15
+    1       2*(C-0x10)+1    Value (Bytes)
+
+    Offset  Length  Value
+    0       1       (0x19 | 0x23)
+    1       1       Value (Bytes)        
+
+    Offset  Length          Value
+    0       1               0x1A <= C <= 0x1D
+    1       2*(C-0x19)      Value (Bytes)
+
+
+Simple key-value
+~~
+
+    Offset  Length  Value
+    0       1       0x01
+    1       1       Key (Integer)
+    2       1       Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x02 <= C <= 0x05
+    1       1       Key (Integer)
+    2       2*(C-1) Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x06
+    1       1       Key (Integer)
+    2       1       N = Length (Integer)
+    2       N       Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x09
+    1       2       Key (Path Integer)
+    2       1       Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x0A <= C <= 0x0D
+    1       2       Key (Path Integer)
+    2       2*(C-9) Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x0E
+    1       2       Key (Path Integer)
+    3       1       N = Length (Integer)
+    4       N       Value (Bytes)
+
+
+Long key-value
+~~
+
+    Offset  Length  Value
+    0       1       0x16
+    1       3       Key (Bytes)
+    4       1       N = Length (Integer)
+    5       N       Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x1E
+    1       1       K = Key Length (Integer)
+    2       K       Key (Bytes)
+    2+K     1       N = Value Length (Integer)
+    2+K+1   N       Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x1F
+    1       1       K = Key Length (Integer)
+    2       K       Key (Bytes)
+    2+K     2       N = Value Length (Integer)
+    2+K+2   N       Value (Bytes)
+
+
+Segmented data
+~~
+
+    Offset  Length  Value
+    0       1       0x07
+    1       1       Segment index (Integer)
+    2       2       N = Length (Integer)
+    4       N       Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x0F
+    2       1       Segment index (Integer)
+    3       2       N = Length (Integer)
+    5       N       Value (Bytes)
+
+
+Path push
+~~
+
+    Offset  Length  Value
+    0       1       0x20 | 0x0E
+    1       1       Value (Integer)
+
+    Offset  Length  Value
+    0       2       (0x20 | 0x0E) 0xFE
+    1       8       Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x28
+    1       2       Value (Path Integer)
+
+    Offset  Length  Value
+    0       1       0x30
+    1       3       Value (Path Integer)
+
+    Offset  Length  Value
+    0       1       0x38
+    1       1       N = Length (Integer)
+    2       N       Value (Bytes)
+
+
+Path pop
+~~
+
+    Offset  Length  Value
+    0       1       (0x3D | 0x40)
+
+
+No-op
+~~
+
+    Offset  Length  Value
+    0       1       0x80
+
+
+
+fp5 Path Structure
+==
+
+fp5 files can contain only one table, which makes things easy. The
+known paths are:
+
+[1]: Some kind of word index?
+
+[3].[1]: Column names => Index pairs (String key, Integer value)
+
+These column names are uppercase.
+
+[3].[5].[X]: Metadata for the Xth column (Key-value pairs)
+
+  [1] => Column name
+  [2] => Second byte indicates column type (1=String, 2=Integer)
+
+[5].[X]: Xth record in the table (Path Integer key, String or Integer value)
+
+It appears that later paths located at [32] and up are references to external
+FileMaker files on the same hard drive.
+
+
+fmp12 Path Structure
+==
+
+fmp12 introduced the ability to store multiple tables in one file. Individual
+tables have a similar layout to the fp5 files, but are stored in a root path
+with a value of 128 or above.
+
+For example, if the first table is stored at path [130], that table's column
+metadata can be found at [130].[3].[5].
+
+The semantics are slightly changed, as documented below. fmp12 appears to
+eliminate the Integer column type in favor of all Strings.
+
+[4].[1].[7].[X]: Metadata about the Xth table
+
+  [16] => Table name
+
+[128+X].[3].[5].[Y]: Metadata for the Yth column of the Xth table
+
+[128+X].[5].[Y]: Yth record in the Xth table (Path Integer key, String value)
+
+Note that the sequence of tables is not necessarily compact.
