@@ -46,6 +46,20 @@ For example, the hexadecimal byte sequence
 translates to Unicode code point 0x60 + 0x0100 = U+0160 (LATIN CAPITAL LETTER S
 WITH CARON).
 
+A second mechanism is used for Greek letters, which are introduced with the
+byte sequence
+
+  1b fb
+
+This appears to "flip on" a 1-byte Greek and ASCII character set, where non-ASCII
+bytes are offset by 0x2F0 to arrive at the Unicode code point. For example the
+sequence
+
+  1b fb b9 c8
+
+results in two letters: 0xb9 + 0x2F0 = U+3A9 (GREEK CAPITAL LETTER OMEGA)
+followed by 0xc8 + 0x2F0 = U+03B8 (GREEK LOWERCASE LETTER THETA).
+
 The full encoding scheme may become clear with more sample files.
 
 
@@ -244,7 +258,7 @@ Path push
 fmp12 Codes
 ==
 
-As with the fp5 codes, ach chunk can usually be identified by its first byte,
+As with the fp5 codes, each chunk can usually be identified by its first byte,
 although in a few cases examining the second byte is necessary.
 
 The possible chunk types and structures are:
