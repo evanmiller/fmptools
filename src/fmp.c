@@ -109,7 +109,7 @@ fmp_error_t read_header(fmp_file_t *ctx) {
         return FMP_ERROR_UNSUPPORTED_CHARACTER_SET;
     }
 
-    copy_fixed_string(ctx->version_date_string, sizeof(ctx->version_date_string), &buf[531], 6);
+    copy_fixed_string(ctx->version_date_string, sizeof(ctx->version_date_string), &buf[531], 7);
 #ifdef HAVE_STRPTIME
     strptime(ctx->version_date_string, "%d%b%y", &ctx->version_date);
 #endif
