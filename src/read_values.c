@@ -135,10 +135,10 @@ static chunk_status_t handle_chunk_read_values_v3(fmp_chunk_t *chunk, fmp_read_v
                     chunk->data.bytes, chunk->data.len);
             current_column->index = column_index;
         } else if (chunk->ref_simple == 2) {
-            if (chunk->data.bytes[1] == 0x01) {
-                current_column->type = FMP_COLUMN_TYPE_STRING;
-            } else if (chunk->data.bytes[1] == 0x02) {
-                current_column->type = FMP_COLUMN_TYPE_NUMBER;
+            if (chunk->data.bytes[1] <= FMP_COLUMN_TYPE_GLOBAL) {
+                current_column->type = chunk->data.bytes[1];
+            } else {
+                current_column->type = FMP_COLUMN_TYPE_UNKNOWN;
             }
         }
         return CHUNK_NEXT;

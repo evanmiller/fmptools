@@ -97,7 +97,7 @@ sequence can be used to distinguish fp5 files from fmp12 files.
 The name of the software that created the file can be found at byte offset
 541 in the header. This string is a Pascal string, consisting of a one-byte
 length at offset 541 followed by an ASCII, non-terminated string, usually
-of the form "File Maker Pro X.0", where X is the version number.
+of the form "Pro X.0", where X is the version number.
 
 
 Sector Structure

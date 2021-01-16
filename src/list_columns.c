@@ -67,10 +67,10 @@ static chunk_status_t handle_chunk_list_columns_v3(fmp_chunk_t *chunk, fmp_list_
         if (column_index > 0 && column_index <= ctx->array->count)
             current_column = ctx->array->columns + column_index - 1;
         if (current_column && chunk->ref_simple == 2) {
-            if (chunk->data.bytes[1] == 0x01) {
-                current_column->type = FMP_COLUMN_TYPE_STRING;
-            } else if (chunk->data.bytes[1] == 0x02) {
-                current_column->type = FMP_COLUMN_TYPE_NUMBER;
+            if (chunk->data.bytes[1] <= FMP_COLUMN_TYPE_GLOBAL) {
+                current_column->type = chunk->data.bytes[1];
+            } else {
+                current_column->type = FMP_COLUMN_TYPE_UNKNOWN;
             }
         }
     }

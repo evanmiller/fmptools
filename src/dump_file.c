@@ -138,6 +138,11 @@ fmp_error_t fmp_dump_file(fmp_file_t *file) {
     ctx.xor_mask = file->xor_mask;
 
     debug("Version: File Maker %s\n", file->version_string);
+    debug("Released: %04d-%02d-%02d\n",
+            file->version_date.tm_year+1900,
+            file->version_date.tm_mon+1,
+            file->version_date.tm_mday
+            );
 
     return process_blocks(file, &start_block, &dump_chunk, &ctx);
 }

@@ -29,6 +29,7 @@ extern "C" {
 
 #include <iconv.h>
 #include <stdint.h>
+#include <time.h>
 
 typedef enum {
     FMP_OK = 0,
@@ -48,8 +49,15 @@ typedef enum {
 } fmp_error_t;
 
 typedef enum {
-    FMP_COLUMN_TYPE_STRING,
-    FMP_COLUMN_TYPE_NUMBER
+    FMP_COLUMN_TYPE_UNKNOWN,
+    FMP_COLUMN_TYPE_TEXT,
+    FMP_COLUMN_TYPE_NUMBER,
+    FMP_COLUMN_TYPE_DATE,
+    FMP_COLUMN_TYPE_TIME,
+    FMP_COLUMN_TYPE_CONTAINER,
+    FMP_COLUMN_TYPE_CALC,
+    FMP_COLUMN_TYPE_SUMMARY,
+    FMP_COLUMN_TYPE_GLOBAL
 } fmp_column_type_e;
 
 typedef enum {
@@ -123,6 +131,8 @@ typedef struct fmp_block_s {
 typedef struct fmp_file_s {
     FILE *stream;
     char version_string[10];
+    char version_date_string[8];
+    struct tm version_date;
     char filename[64];
     int version_num;
     size_t  file_size;

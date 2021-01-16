@@ -48,6 +48,10 @@ typedef struct fmp_ctx_s {
     void *user_ctx;
 } fmp_ctx_t;
 
+static void copy_fixed_string(char *dst, size_t dst_len, const void *buf, size_t buf_len) {
+    snprintf(dst, dst_len, "%*s", (int)buf_len, buf);
+}
+
 static void copy_pascal_string(char *dst, size_t dst_len, const void *buf) {
     const unsigned char *chars = (const unsigned char *)buf;
     size_t len = *chars++;
@@ -98,6 +102,8 @@ fmp_error_t read_header(fmp_file_t *ctx) {
         return FMP_ERROR_UNSUPPORTED_CHARACTER_SET;
     }
 
+    copy_fixed_string(ctx->version_date_string, sizeof(ctx->version_date_string), &buf[531], 6);
+    strptime(ctx->version_date_string, "%d%b%y", &ctx->version_date);
     copy_pascal_string(ctx->version_string, sizeof(ctx->version_string), &buf[541]);
 
     // Throwaway sector
