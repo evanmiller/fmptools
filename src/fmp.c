@@ -20,9 +20,8 @@
  * THE SOFTWARE.
  */
 
-#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
 #include <time.h>
-#undef _XOPEN_SOURCE
 
 #include <fcntl.h>
 #include <unistd.h>
