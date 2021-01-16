@@ -160,62 +160,7 @@ void convert(iconv_t converter, uint8_t xor_mask,
             dst[dst_len-1] = '\0';
         }
     } else {
-        uint8_t *output_bytes = (uint8_t *)dst;
-        uint8_t group = 0;
-        uint8_t sticky_group = 0;
-        for (int i=0; i<input_bytes_left; i++) {
-            uint8_t c = input_bytes[i];
-            if (!group && c < 0x10) {
-            /* Funky code page switching for non-Latin-1 characters */
-            /* These are educated guesses but may not correspond to reality */
-                if (c == 0x0A) { /* Line Feed \n */
-                    *output_bytes++ = ' ';
-                } else if (c == 0x0D) { /* Carriage Return \r */
-                    *output_bytes++ = ' ';
-                } else {
-                    group = c;
-                }
-                continue;
-            } else if (!group && c == 0x1B && ++i < input_bytes_left) {
-                /*
-                 * The GreekTest file has a series
-                 * 0x1B  0xFB  0xC1  0xB9
-                 * This appears to "flip on" the Greek. How is it flipped off?
-                 */
-                sticky_group = (input_bytes[i] & 0x0F);
-                group = 0;
-                continue;
-            } else if (group == 0x03 || (!group && sticky_group == 0x03)) {
-                /* Extended Latin */
-                /* 0x03 0x60 => U+0160 */
-                *output_bytes++ = 0xC4 | ((c & 0xC0) >> 6);
-                *output_bytes++ = 0x80 | (c & 0x3F);
-            } else if (group == 0x05 || (!group && sticky_group == 0x05)) {
-                /* Punctuation */
-                /* 0x05 0x19 => U+2019 (Right Single Quotation Mark) */
-                /* 0x05 0x26 => U+2026 (Ellipsis) */
-                *output_bytes++ = 0xE2;
-                *output_bytes++ = 0x80 | ((c & 0xC0) >> 6);
-                *output_bytes++ = 0x80 | (c & 0x3F);
-            } else if (c >= 0x20 && c <= 0x7F) { /* ASCII, pass through */
-                *output_bytes++ = c;
-            } else if (group == 0x0B || (!group && sticky_group == 0x0B)) {
-                /* Greek / Coptic */
-                /* 0xB9 => U+03A9 (Omega) => CE A9 */
-                /* 0xC1 => U+03B1 (alpha) => CE B1 */
-                /* 0xC8 => U+03B8 (theta) => CE B1 */
-                *output_bytes++ = 0xCC | (((c-0x10) & 0xC0) >> 6);
-                *output_bytes++ = 0x80 | ((c-0x10) & 0x3F);
-            } else if (!group && !sticky_group) { /* Latin-1 */
-                *output_bytes++ = 0xC0 | (c >> 6);
-                *output_bytes++ = 0x80 | (c & 0x3F);
-            } else {
-                *output_bytes++ = '?';
-                (void)0;
-            }
-            group = 0;
-        }
-        *output_bytes++ = '\0';
+        convert_scsu_to_utf8(dst, dst_len, (const uint8_t *)input_bytes, input_bytes_left);
     }
     if (xor_mask) {
         free(src);

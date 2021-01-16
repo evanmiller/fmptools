@@ -27,40 +27,15 @@ created them; in most cases, this encoding is MacRoman. iconv can be used to
 convert this text data to a more modern encoding, e.g. UTF-8.
 
 The story with fmp12 is more complicated. FileMaker began supporting Unicode
-characters before UTF-8 achieved widespread popularity, and appears to use a
-custom multibyte encoding scheme, perhaps inspired by the Lotus Multi-Byte
-Character Set.
+characters before UTF-8 achieved widespread popularity, and appears to use the
+now-deprecated Standard Compression Scheme for Unicode (SCSU), which is 
+documented here:
 
-As best as I can discern, fmp12 files begin in Latin-1 (ISO-8859-1), but switch
-to a custom encoder when an ASCII control byte (unsigned value less than 0x20)
-is encountered. I have been able to confirm the function of the following two
-"switch" bytes:
+    https://www.unicode.org/reports/tr6/tr6-4.html
 
-  0x03 - The next byte is a Unicode code point, offset by 256  (= 0x0100)
-  0x05 - The next byte is a Unicode code point, offset by 8192 (= 0x2000)
-
-For example, the hexadecimal byte sequence
-
-  03 60
-
-translates to Unicode code point 0x60 + 0x0100 = U+0160 (LATIN CAPITAL LETTER S
-WITH CARON).
-
-A second mechanism is used for Greek letters, which are introduced with the
-byte sequence
-
-  1b fb
-
-This appears to "flip on" a 1-byte Greek and ASCII character set, where non-ASCII
-bytes are offset by 0x2F0 to arrive at the Unicode code point. For example the
-sequence
-
-  1b fb b9 c8
-
-results in two letters: 0xb9 + 0x2F0 = U+3A9 (GREEK CAPITAL LETTER OMEGA)
-followed by 0xc8 + 0x2F0 = U+03B8 (GREEK LOWERCASE LETTER THETA).
-
-The full encoding scheme may become clear with more sample files.
+SCSU is Latin-1 compatible, so treating the raw bytes as ISO-8859-1 is a good
+start. But then it uses control codes to switch to other "windows" of Unicode
+characters, including full support for UTF-16BE and extended Unicode planes.
 
 
 Preliminaries: Integer Encoding

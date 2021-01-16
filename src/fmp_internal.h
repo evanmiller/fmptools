@@ -18,6 +18,7 @@ fmp_block_t *new_block_from_sector(fmp_file_t *file, const uint8_t *sector, fmp_
 
 void convert(iconv_t converter, uint8_t xor_mask,
         char *dst, size_t dst_len, uint8_t *src, size_t src_len);
+void convert_scsu_to_utf8(char *dst, size_t dst_len, const uint8_t *src, size_t src_len);
 
 int table_path_match_start1(fmp_chunk_t *chunk, int depth, int val);
 int table_path_match_start2(fmp_chunk_t *chunk, int depth, int val1, int val2);
