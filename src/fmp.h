@@ -61,6 +61,35 @@ typedef enum {
 } fmp_column_type_e;
 
 typedef enum {
+    FMP_COLLATION_ENGLISH = 0x00,
+    FMP_COLLATION_FRENCH = 0x02,
+    FMP_COLLATION_GERMAN = 0x03,
+    FMP_COLLATION_ITALIAN = 0x04,
+    FMP_COLLATION_SWEDISH = 0x07,
+    FMP_COLLATION_SPANISH = 0x08,
+    FMP_COLLATION_DANISH = 0x09,
+    FMP_COLLATION_PORTUGUESE = 0x0A,
+    FMP_COLLATION_NORWEGIAN = 0x0C,
+    FMP_COLLATION_FINNISH = 0x11,
+    FMP_COLLATION_GREEK = 0x14,
+    FMP_COLLATION_ICELANDIC = 0x15,
+    FMP_COLLATION_TURKISH = 0x18,
+    FMP_COLLATION_ROMANIAN = 0x27,
+    FMP_COLLATION_POLISH = 0x2a,
+    FMP_COLLATION_HUNGARIAN = 0x2b,
+    FMP_COLLATION_RUSSIAN = 0x31,
+    FMP_COLLATION_CZECH = 0x38,
+    FMP_COLLATION_UKRAINIAN = 0x3e,
+    FMP_COLLATION_CROATIAN = 0x42,
+    FMP_COLLATION_CATALAN = 0x49,
+    FMP_COLLATION_FINNISH_ALT = 0x62,
+    FMP_COLLATION_SWEDISH_ALT = 0x63,
+    FMP_COLLATION_GERMAN_ALT = 0x64,
+    FMP_COLLATION_SPANISH_ALT = 0x65,
+    FMP_COLLATION_ASCII = 0x66,
+} fmp_column_collation_e;
+
+typedef enum {
     FMP_HANDLER_OK,
     FMP_HANDLER_SKIP,
     FMP_HANDLER_ABORT
@@ -78,6 +107,7 @@ typedef enum {
 typedef struct fmp_column_s {
     int index;
     fmp_column_type_e type;
+    fmp_column_collation_e collation;
     char utf8_name[64];
 } fmp_column_t;
 

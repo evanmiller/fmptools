@@ -72,6 +72,7 @@ static chunk_status_t handle_chunk_list_columns_v3(fmp_chunk_t *chunk, fmp_list_
             } else {
                 current_column->type = FMP_COLUMN_TYPE_UNKNOWN;
             }
+            current_column->collation = chunk->data.bytes[3];
         }
     }
     return CHUNK_NEXT;
