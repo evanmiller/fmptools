@@ -33,6 +33,46 @@ typedef struct my_ctx_s {
     int last_row;
 } my_ctx_t;
 
+const char types[][10] = {
+    [FMP_COLUMN_TYPE_TEXT] = "text",
+    [FMP_COLUMN_TYPE_NUMBER] = "number",
+    [FMP_COLUMN_TYPE_DATE] = "date",
+    [FMP_COLUMN_TYPE_TIME] = "time",
+    [FMP_COLUMN_TYPE_CONTAINER] = "container",
+    [FMP_COLUMN_TYPE_CALC] = "calc",
+    [FMP_COLUMN_TYPE_SUMMARY] = "summary",
+    [FMP_COLUMN_TYPE_GLOBAL] = "global"
+};
+
+const char collations[][3] = {
+    [FMP_COLLATION_ENGLISH] = "en",
+    [FMP_COLLATION_FRENCH] = "fr",
+    [FMP_COLLATION_GERMAN] = "de",
+    [FMP_COLLATION_DUTCH] = "nl",
+    [FMP_COLLATION_ITALIAN] = "it",
+    [FMP_COLLATION_SWEDISH] = "sv",
+    [FMP_COLLATION_SPANISH] = "es",
+    [FMP_COLLATION_DANISH] = "da",
+    [FMP_COLLATION_PORTUGUESE] = "pt",
+    [FMP_COLLATION_NORWEGIAN] = "no",
+    [FMP_COLLATION_FINNISH] = "fi",
+    [FMP_COLLATION_GREEK] = "el",
+    [FMP_COLLATION_ICELANDIC] = "is",
+    [FMP_COLLATION_TURKISH] = "tr",
+    [FMP_COLLATION_ROMANIAN] = "ro",
+    [FMP_COLLATION_POLISH] = "pl",
+    [FMP_COLLATION_HUNGARIAN] = "hu",
+    [FMP_COLLATION_RUSSIAN] = "ru",
+    [FMP_COLLATION_CZECH] = "cs",
+    [FMP_COLLATION_UKRAINIAN] = "uk",
+    [FMP_COLLATION_CROATIAN] = "hr",
+    [FMP_COLLATION_CATALAN] = "ca",
+    [FMP_COLLATION_FINNISH_ALT] = "fi",
+    [FMP_COLLATION_SWEDISH_ALT] = "sv",
+    [FMP_COLLATION_GERMAN_ALT] = "de",
+    [FMP_COLLATION_SPANISH_ALT] = "es",
+};
+
 fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *value, void *ws) {
     my_ctx_t *ctx = (my_ctx_t *)ws;
     if (row != ctx->last_row) {
@@ -79,8 +119,23 @@ int main(int argc, char *argv[]) {
         yajl_gen_array_open(g);
         fmp_column_array_t *columns = fmp_list_columns(file, table, &error);
         for (int k=0; k<columns->count; k++) {
-            yajl_gen_string(g, (const unsigned char *)columns->columns[k].utf8_name,
-                    strlen(columns->columns[k].utf8_name));
+            fmp_column_t *column = &columns->columns[k];
+            yajl_gen_map_open(g);
+            yajl_gen_string(g, (const unsigned char *)"name", sizeof("name")-1);
+            yajl_gen_string(g, (const unsigned char *)column->utf8_name, strlen(column->utf8_name));
+            if (column->type
+                    && column->type < sizeof(types)/sizeof(types[0]) 
+                    && types[column->type][0]) {
+                yajl_gen_string(g, (const unsigned char *)"type", sizeof("type")-1);
+                yajl_gen_string(g, (const unsigned char *)types[column->type], strlen(types[column->type]));
+            }
+            if (column->collation
+                    && column->collation < sizeof(collations)/sizeof(collations[0])
+                    && collations[column->collation][0]) {
+                yajl_gen_string(g, (const unsigned char *)"collation", sizeof("collation")-1);
+                yajl_gen_string(g, (const unsigned char *)collations[column->collation], 2);
+            }
+            yajl_gen_map_close(g);
         }
         fmp_free_columns(columns);
         yajl_gen_array_close(g);
