@@ -163,11 +163,11 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             chunk->data.bytes = p;
             chunk->data.len = 3;
             p += chunk->data.len;
-        } else if (c > 0x10 && c <= 0x15) {
+        } else if (c >= 0x11 && c <= 0x15) {
             chunk->type = FMP_CHUNK_DATA_SIMPLE;
             p++;
             chunk->data.bytes = p;
-            chunk->data.len = 2*(c-0x10)+1;
+            chunk->data.len = 3 + (c == 0x11) + 2*(c-0x11);
             p += chunk->data.len;
         } else if (c == 0x16) {
             chunk->type = FMP_CHUNK_FIELD_REF_LONG;
