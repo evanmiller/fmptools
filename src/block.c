@@ -183,6 +183,21 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             chunk->data.len = *p++;
             chunk->data.bytes = p;
             p += chunk->data.len;
+        } else if (c == 0x17) {
+            chunk->type = FMP_CHUNK_FIELD_REF_LONG;
+            p++;
+            chunk->ref_long.bytes = p;
+            chunk->ref_long.len = 3;
+            p += chunk->ref_long.len;
+            if (p + 2 > end) {
+                retval = FMP_ERROR_DATA_EXCEEDS_SECTOR_SIZE;
+                free(chunk);
+                break;
+            }
+            chunk->data.len = copy_int(p, 2);
+            p += 2;
+            chunk->data.bytes = p;
+            p += chunk->data.len;
         } else if (c >= 0x19 && c <= 0x1D) {
             chunk->type = FMP_CHUNK_DATA_SIMPLE;
             p++;
