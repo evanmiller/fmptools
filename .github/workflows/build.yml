@@ -6,12 +6,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ clang, gcc, gcc-8, gcc-9, gcc-10 ]
+        compiler: [ clang, gcc, gcc-9, gcc-10, gcc-11 ]
     steps:
       - name: Add repository
         run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
       - name: Install packages
-        run: sudo apt install gettext gcc-8 gcc-9 gcc-10 libyajl-dev libsqlite3-dev
+        run: sudo apt install gettext gcc-9 gcc-10 gcc-11 libyajl-dev libsqlite3-dev
       - uses: actions/checkout@v2
       - name: Autoconf
         run: autoreconf -i -f
