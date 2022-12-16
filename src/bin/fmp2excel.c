@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     }
 
     fmp_error_t error = FMP_OK;
-    lxw_workbook *wb = workbook_new(argv[2]);
+    lxw_workbook *wb = workbook_new_opt(argv[2], &(lxw_workbook_options){ .constant_memory = 1 });
     if (!wb) {
         fprintf(stderr, "Error opening workbook at %s\n", argv[2]);
         return 1;
