@@ -30,9 +30,6 @@
 
 fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *value, void *ctxp) {
     lxw_worksheet *ws = (lxw_worksheet *)ctxp;
-    if (row == 1) {
-        worksheet_write_string(ws, 0, column->index-1, column->utf8_name, NULL);
-    }
     worksheet_write_string(ws, row, column->index-1, value, NULL);
     return FMP_HANDLER_OK;
 }
@@ -64,6 +61,16 @@ int main(int argc, char *argv[]) {
         if (!ws) {
             fprintf(stderr, "Error adding workbook named %s\n", table->utf8_name);
             return 1;
+        }
+        worksheet_freeze_panes(ws, 1, 0);
+        fmp_column_array_t *columns = fmp_list_columns(file, table, &error);
+        if (!columns) {
+            fprintf(stderr, "Error code: %d\n", error);
+            return 1;
+        }
+        for (int j=0; j<columns->count; j++) {
+            fmp_column_t *column = &columns->columns[j];
+            worksheet_write_string(ws, 0, column->index-1, column->utf8_name, NULL);
         }
         error = fmp_read_values(file, table, &handle_value, ws);
         if (error != FMP_OK) {
