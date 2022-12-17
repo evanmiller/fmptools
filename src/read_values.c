@@ -30,7 +30,7 @@
 typedef struct fmp_read_values_ctx_s {
     size_t current_row;
     size_t last_row;
-    char *long_string_buf;
+    unsigned char *long_string_buf;
     size_t long_string_len;
     size_t long_string_used;
     size_t target_table_index;
@@ -42,15 +42,8 @@ typedef struct fmp_read_values_ctx_s {
     void *user_ctx;
 } fmp_read_values_ctx_t;
 
-static int path_is_long_string(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
-    if (!table_path_match_start1(chunk, 3, 5))
-        return 0;
-    if (chunk->version_num < 7) {
-        uint64_t column_index = path_value(chunk, chunk->path[2]);
-        return path_is(chunk, chunk->path[1], ctx->last_row - (column_index == 1));
-    }
-    uint64_t column_index = path_value(chunk, chunk->path[3]);
-    return path_is(chunk, chunk->path[2], ctx->last_row + (column_index == 1));
+static int path_is_table_data(fmp_chunk_t *chunk) {
+    return table_path_match_start1(chunk, 2, 5);
 }
 
 static int path_row(fmp_chunk_t *chunk) {
@@ -59,8 +52,14 @@ static int path_row(fmp_chunk_t *chunk) {
     return path_value(chunk, chunk->path[2]);
 }
 
-static int path_is_table_data(fmp_chunk_t *chunk) {
-    return table_path_match_start1(chunk, 2, 5);
+static int path_is_long_string(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
+    if (!table_path_match_start1(chunk, 3, 5))
+        return 0;
+    uint64_t column_index = path_value(chunk, chunk->path[chunk->version_num < 7 ? 2 : 3]);
+    if (ctx->last_column == 0 || column_index < ctx->last_column) {
+        return path_row(chunk) > ctx->last_row;
+    }
+    return path_row(chunk) == ctx->last_row;
 }
 
 static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
@@ -68,13 +67,17 @@ static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *c
     int long_string = 0;
     size_t column_index = 0;
     if (path_is_long_string(chunk, ctx)) {
-        if (chunk->ref_simple == 0)
+        if (chunk->type == FMP_CHUNK_FIELD_REF_SIMPLE && chunk->ref_simple == 0)
             return CHUNK_NEXT; /* Rich-text formatting */
         long_string = 1;
         column_index = path_value(chunk, chunk->path[chunk->path_level-1]);
-    } else if (path_is_table_data(chunk) && chunk->ref_simple <= ctx->num_columns &&
-               chunk->ref_simple != 252 /* Special metadata value? */) {
-        column_index = chunk->ref_simple;
+    } else if (path_is_table_data(chunk)) {
+        if (chunk->type == FMP_CHUNK_FIELD_REF_SIMPLE && chunk->ref_simple <= ctx->num_columns
+                && chunk->ref_simple != 252 /* Special metadata value? */) {
+            column_index = chunk->ref_simple;
+        } else if (chunk->type == FMP_CHUNK_DATA_SEGMENT && chunk->segment_index <= ctx->num_columns) {
+            column_index = chunk->segment_index;
+        }
     }
     if (column_index == 0 || column_index > ctx->num_columns)
         return CHUNK_NEXT;
@@ -82,30 +85,33 @@ static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *c
     column = &ctx->columns[column_index-1];
 
     if (column->index != ctx->last_column && ctx->long_string_used) {
-        if (ctx->handle_value && ctx->handle_value(ctx->current_row,
-                    &ctx->columns[ctx->last_column-1],
-                    ctx->long_string_buf, ctx->user_ctx) == FMP_HANDLER_ABORT)
-            return CHUNK_ABORT;
+        if (ctx->handle_value) {
+            char utf8_value[ctx->long_string_used*4+1];
+            convert(ctx->file->converter, ctx->file->xor_mask,
+                    utf8_value, sizeof(utf8_value), ctx->long_string_buf, ctx->long_string_used);
+            if (ctx->handle_value(ctx->current_row, &ctx->columns[ctx->last_column-1],
+                    utf8_value, ctx->user_ctx) == FMP_HANDLER_ABORT)
+                return CHUNK_ABORT;
+        }
 
         ctx->long_string_used = 0;
     }
     if (path_row(chunk) != ctx->last_row || column->index < ctx->last_column) {
         ctx->current_row++;
     }
-    char utf8_value[chunk->data.len*4+1];
-    convert(ctx->file->converter, ctx->file->xor_mask,
-            utf8_value, sizeof(utf8_value), chunk->data.bytes, chunk->data.len);
     if (long_string) {
         if (ctx->long_string_buf == NULL ||
-                ctx->long_string_len < ctx->long_string_used + strlen(utf8_value) + 1) {
-            ctx->long_string_len = ctx->long_string_used + strlen(utf8_value) + 1;
+                ctx->long_string_len < ctx->long_string_used + chunk->data.len + 1) {
+            ctx->long_string_len = ctx->long_string_used + chunk->data.len + 1;
             ctx->long_string_buf = realloc(ctx->long_string_buf, ctx->long_string_len);
         }
-        memcpy(&ctx->long_string_buf[ctx->long_string_used],
-                utf8_value, strlen(utf8_value));
-        ctx->long_string_used += strlen(utf8_value);
+        memcpy(&ctx->long_string_buf[ctx->long_string_used], chunk->data.bytes, chunk->data.len);
+        ctx->long_string_used += chunk->data.len;
         ctx->long_string_buf[ctx->long_string_used] = '\0';
     } else if (ctx->handle_value) {
+        char utf8_value[chunk->data.len*4+1];
+        convert(ctx->file->converter, ctx->file->xor_mask,
+                utf8_value, sizeof(utf8_value), chunk->data.bytes, chunk->data.len);
         if (ctx->handle_value(ctx->current_row, column, utf8_value, ctx->user_ctx) == FMP_HANDLER_ABORT)
             return CHUNK_ABORT;
     }
@@ -151,7 +157,7 @@ static chunk_status_t handle_chunk_read_values_v7(fmp_chunk_t *chunk, fmp_read_v
         return CHUNK_DONE;
     if (path_value(chunk, chunk->path[0]) < ctx->target_table_index + 128)
         return CHUNK_NEXT;
-    if (chunk->type != FMP_CHUNK_FIELD_REF_SIMPLE)
+    if (chunk->type != FMP_CHUNK_FIELD_REF_SIMPLE && chunk->type != FMP_CHUNK_DATA_SEGMENT)
         return CHUNK_NEXT;
 
     if (table_path_match_start2(chunk, 3, 3, 5)) {
@@ -188,8 +194,11 @@ fmp_error_t fmp_read_values(fmp_file_t *file, fmp_table_t *table, fmp_value_hand
     ctx->user_ctx = user_ctx;
     fmp_error_t retval = process_blocks(file, NULL, handle_chunk_read_values, ctx);
     if (ctx->long_string_used && ctx->handle_value) {
+        char utf8_value[ctx->long_string_used*4+1];
+        convert(ctx->file->converter, ctx->file->xor_mask,
+                utf8_value, sizeof(utf8_value), ctx->long_string_buf, ctx->long_string_used);
         ctx->handle_value(ctx->current_row, &ctx->columns[ctx->last_column-1],
-                ctx->long_string_buf, user_ctx);
+                utf8_value, user_ctx);
         ctx->long_string_used = 0;
     }
     free(ctx->long_string_buf);
