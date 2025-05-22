@@ -45,7 +45,11 @@ fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *val
             fprintf(stderr, "Error inserting data into SQLite table: %s\n", sqlite3_errmsg(ctx->db));
             return FMP_HANDLER_ABORT;
         }
-        sqlite3_reset(ctx->insert_stmt);
+        rc = sqlite3_reset(ctx->insert_stmt);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Error resetting INSERT statement: %s\n", sqlite3_errmsg(ctx->db));
+            return FMP_HANDLER_ABORT;
+        }
         sqlite3_clear_bindings(ctx->insert_stmt);
     }
     int rc = sqlite3_bind_text(ctx->insert_stmt, column->index, value, strlen(value), SQLITE_TRANSIENT);
@@ -55,6 +59,37 @@ fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *val
     }
     ctx->last_row = row;
     return FMP_HANDLER_OK;
+}
+
+static size_t create_query_length(fmp_table_t *table, fmp_column_array_t *columns) {
+    size_t len = 0;
+    len += sizeof("CREATE TABLE \"\" ();");
+    len += strlen(table->utf8_name);
+    for (int j=0; j<columns->count; j++) {
+        len += sizeof("\"\" TEXT")-1;
+        len += strlen(columns->columns[j].utf8_name);
+        if (j < columns->count) {
+            len += sizeof(", ")-1;
+        }
+    }
+    return len;
+}
+
+static size_t insert_query_length(fmp_table_t *table, fmp_column_array_t *columns) {
+    size_t len = 0;
+    len += sizeof("INSERT INTO \"\" () VALUES ();");
+    len += strlen(table->utf8_name);
+    for (int j=0; j<columns->count; j++) {
+        len += sizeof("\"\"")-1;
+        len += strlen(columns->columns[j].utf8_name);
+        len += sizeof("\"\"")-1;
+        len += sizeof("?NNNNN")-1;
+        if (j < columns->count) {
+            len += sizeof(", ")-1;
+            len += sizeof(", ")-1;
+        }
+    }
+    return len;
 }
 
 int main(int argc, char *argv[]) {
@@ -96,6 +131,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    char *create_query = NULL;
+    char *insert_query = NULL;
+
     for (int i=0; i<tables->count; i++) {
         fmp_table_t *table = &tables->tables[i];
         fmp_column_array_t *columns = fmp_list_columns(file, table, &error);
@@ -103,12 +141,15 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Error code: %d\n", error);
             return 1;
         }
-        char create_query[4096];
-        char insert_query[4096];
+        size_t create_query_len = create_query_length(table, columns);
+        size_t insert_query_len = insert_query_length(table, columns);
+        create_query = realloc(create_query, create_query_len);
+        insert_query = realloc(insert_query, insert_query_len);
+
         char *p = create_query;
         char *q = insert_query;
-        p += snprintf(p, sizeof(create_query), "CREATE TABLE \"%s\" (", table->utf8_name);
-        q += snprintf(q, sizeof(insert_query), "INSERT INTO \"%s\" (", table->utf8_name);
+        p += snprintf(p, create_query_len, "CREATE TABLE \"%s\" (", table->utf8_name);
+        q += snprintf(q, insert_query_len, "INSERT INTO \"%s\" (", table->utf8_name);
         for (int j=0; j<columns->count; j++) {
             fmp_column_t *column = &columns->columns[j];
             char *colname = strdup(column->utf8_name);
@@ -117,23 +158,23 @@ int main(int argc, char *argv[]) {
                 if (colname[k] == ' ')
                     colname[k] = '_';
             }
-            p += snprintf(p, sizeof(create_query) - (p - create_query), "\"%s\" TEXT", colname);
-            q += snprintf(q, sizeof(insert_query) - (q - insert_query), "\"%s\"", colname);
+            p += snprintf(p, create_query_len - (p - create_query), "\"%s\" TEXT", colname);
+            q += snprintf(q, insert_query_len - (q - insert_query), "\"%s\"", colname);
             if (j < columns->count - 1) {
-                p += snprintf(p, sizeof(create_query) - (p - create_query), ", ");
-                q += snprintf(q, sizeof(insert_query) - (q - insert_query), ", ");
+                p += snprintf(p, create_query_len - (p - create_query), ", ");
+                q += snprintf(q, insert_query_len - (q - insert_query), ", ");
             }
             free(colname);
         }
-        p += snprintf(p, sizeof(create_query) - (p - create_query), ");");
-        q += snprintf(q, sizeof(insert_query) - (q - insert_query), ") VALUES (");
+        p += snprintf(p, create_query_len - (p - create_query), ");");
+        q += snprintf(q, insert_query_len - (q - insert_query), ") VALUES (");
         for (int j=0; j<columns->count; j++) {
             fmp_column_t *column = &columns->columns[j];
-            q += snprintf(q, sizeof(insert_query) - (q - insert_query), "?%d", column->index);
+            q += snprintf(q, insert_query_len - (q - insert_query), "?%d", column->index);
             if (j < columns->count - 1)
-                q += snprintf(q, sizeof(insert_query) - (q - insert_query), ", ");
+                q += snprintf(q, insert_query_len - (q - insert_query), ", ");
         }
-        q += snprintf(q, sizeof(insert_query) - (q - insert_query), ");");
+        q += snprintf(q, insert_query_len - (q - insert_query), ");");
 
         fprintf(stderr, "CREATE TABLE \"%s\"\n", table->utf8_name);
         rc = sqlite3_exec(db, create_query, NULL, NULL, &zErrMsg);
@@ -164,6 +205,8 @@ int main(int argc, char *argv[]) {
         fmp_free_columns(columns);
     }
 
+    free(create_query);
+    free(insert_query);
     fmp_free_tables(tables);
     sqlite3_close(db);
     fmp_close_file(file);
