@@ -101,6 +101,7 @@ size_t convert_scsu_to_utf8(
     uint8_t shift = 0;
     uint8_t unicode = 0;
     uint8_t active_window = 0;
+    uint32_t last_u = 0; // Unicode code point
     errno = 0;
     while (*inbytesleft && *outbytesleft) {
         uint8_t c = *src++; *inbytesleft -= 1;
@@ -171,8 +172,13 @@ size_t convert_scsu_to_utf8(
                 *inbytesleft -= 2;
                 continue;
             } else { errno = EINVAL; break; }
-        } else if (c == 0x0A || c == 0x0D || c == 0x09) {
-            u = ' '; /* Encode as space, hack */
+        } else if (c == 0x09) {
+            u = ' '; /* Encode tab as space, hack */
+        } else if (c == 0x0A && last_u == 0x0D) {
+            last_u = c;
+            continue; /* Convert CRLF to LF */
+        } else if (c == 0x0A || c == 0x0B || c == 0x0D) {
+            u = '\n'; /* Encode CR, VT, LF as LF */
         } else if (c >= 0x20 && c <= 0x7F) { /* ASCII, pass through */
             u = c;
         } else if (c >= 0x80) {
@@ -217,6 +223,7 @@ size_t convert_scsu_to_utf8(
             *dst++ = (u & 0x7F);
             *outbytesleft -= 1;
         }
+        last_u = u;
     }
     *outbuf = (char *)dst;
     *inbuf = (char *)src;
