@@ -348,7 +348,7 @@ Segmented data
 
     Offset  Length  Value
     0       1       0x0F
-    2       1       Segment index (Integer)
+    1       2       Segment index (Path Integer)
     3       2       N = Length (Integer)
     5       N       Value (Bytes)
 
