@@ -142,7 +142,7 @@ typedef struct fmp_chunk_s {
     uint8_t path_level;
     uint8_t version_num;
     uint8_t code;
-    uint8_t segment_index;
+    uint16_t segment_index;
     uint16_t ref_simple;
     unsigned int extended:1;
 } fmp_chunk_t;

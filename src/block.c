@@ -144,15 +144,16 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             chunk->data.len = *p++;
             chunk->data.bytes = p;
             p += chunk->data.len;
-        } else if (c == 0x0F && (p[1] & 0x80)) {
+        } else if (c == 0x0F) {
             chunk->type = FMP_CHUNK_DATA_SEGMENT;
-            p += 2;
-            if (p + 3 > end) {
+            p++;
+            if (p + 4 > end) {
                 retval = FMP_ERROR_DATA_EXCEEDS_SECTOR_SIZE;
                 free(chunk);
                 break;
             }
-            chunk->segment_index = *p++;
+            chunk->segment_index = copy_path_int(p, 2);
+            p += 2;
             chunk->data.len = copy_int(p, 2);
             p += 2;
             chunk->data.bytes = p;
