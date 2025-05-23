@@ -33,10 +33,10 @@ jobs:
         compiler: [ clang, gcc ]
     steps:
       - name: Install packages
-        run: brew install automake yajl libxlsxwriter
+        run: brew install automake libtool yajl libxlsxwriter
       - uses: actions/checkout@v2
       - name: Autoconf
-        run: autoreconf -i -f
+        run: autoreconf -i -f -I $(brew --prefix)/share/gettext/m4
       - name: Configure
         run: ./configure
         env:
