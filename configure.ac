@@ -10,6 +10,27 @@ AC_PROG_CXX
 
 AM_ICONV
 
+dnl AM_ICONV clears LIBICONV whenever its strict GNU-conformance check fails,
+dnl which it does on macOS even though iconv_open still lives in -liconv. The
+dnl library would then link with libtool's -undefined dynamic_lookup, leaving
+dnl iconv_open bound to NULL and segfaulting on FP3/FP5 files. Put the flag
+dnl back when iconv_open is genuinely unreachable without it.
+AS_IF([test -z "$LIBICONV"], [
+  AC_MSG_CHECKING([whether iconv_open needs -liconv])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <iconv.h>]],
+                                  [[iconv_close(iconv_open("UTF-8", "UTF-8"));]])],
+    [AC_MSG_RESULT([no])],
+    [fmp_saved_LIBS=$LIBS
+     LIBS="$LIBS -liconv"
+     AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <iconv.h>]],
+                                     [[iconv_close(iconv_open("UTF-8", "UTF-8"));]])],
+       [AC_MSG_RESULT([yes])
+        LIBICONV=-liconv
+        LTLIBICONV=-liconv],
+       [AC_MSG_RESULT([iconv_open unavailable])])
+     LIBS=$fmp_saved_LIBS])
+])
+
 AC_CHECK_FUNCS(strptime fmemopen)
 
 AC_CHECK_LIB([xlsxwriter], [workbook_new], [true], [false])
