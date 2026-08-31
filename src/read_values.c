@@ -130,6 +130,8 @@ static chunk_status_t handle_chunk_read_values_v3(fmp_chunk_t *chunk, fmp_read_v
     if (table_path_match_start2(chunk, 3, 3, 5)) {
         fmp_data_t *column_path = path_at(chunk, chunk->path_level-1);
         size_t column_index = path_value(chunk, column_path);
+        if (column_index == 0 || column_index > FMP_MAX_INDEX)
+            return CHUNK_NEXT;
         if (column_index > ctx->num_columns) {
             ctx->num_columns = column_index;
             ctx->columns = realloc(ctx->columns, ctx->num_columns * sizeof(fmp_column_t));
@@ -163,6 +165,8 @@ static chunk_status_t handle_chunk_read_values_v7(fmp_chunk_t *chunk, fmp_read_v
     if (table_path_match_start2(chunk, 3, 3, 5)) {
         fmp_data_t *column_path = path_at(chunk, chunk->path_level-1);
         size_t column_index = path_value(chunk, column_path);
+        if (column_index == 0 || column_index > FMP_MAX_INDEX)
+            return CHUNK_NEXT;
         if (column_index > ctx->num_columns) {
             ctx->num_columns = column_index;
             ctx->columns = realloc(ctx->columns, ctx->num_columns * sizeof(fmp_column_t));

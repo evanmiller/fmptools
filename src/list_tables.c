@@ -44,7 +44,10 @@ static chunk_status_t handle_chunk_list_tables_v7(fmp_chunk_t *chunk, void *ctxp
     if (path_is(chunk, path_at(chunk, 0), 3) && path_is(chunk, path_at(chunk, 1), 16) &&
             path_is(chunk, path_at(chunk, 2), 5) && path_value(chunk, path_at(chunk, 3)) >= 128) {
         fmp_data_t *table_path = path_at(chunk, chunk->path_level-1);
-        size_t table_index = path_value(chunk, table_path) - 128;
+        uint64_t table_path_val = path_value(chunk, table_path);
+        if (table_path_val < 128 || table_path_val - 128 > FMP_MAX_INDEX)
+            return CHUNK_NEXT;
+        size_t table_index = table_path_val - 128;
         fmp_table_array_t *array = ctx->array;
         if (table_index > array->count) {
             size_t old_count = array->count;

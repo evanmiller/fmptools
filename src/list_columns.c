@@ -60,6 +60,8 @@ static chunk_status_t handle_chunk_list_columns_v3(fmp_chunk_t *chunk, fmp_list_
     if (table_path_match_start2(chunk, 3, 3, 5)) {
         fmp_data_t *column_path = path_at(chunk, chunk->path_level-1);
         size_t column_index = path_value(chunk, column_path);
+        if (column_index == 0 || column_index > FMP_MAX_INDEX)
+            return CHUNK_NEXT;
         if (chunk->ref_simple == 1) {
             return handle_column(column_index, &chunk->data, ctx);
         }
@@ -89,6 +91,8 @@ static chunk_status_t handle_chunk_list_columns_v7(fmp_chunk_t *chunk, fmp_list_
     if (table_path_match_start2(chunk, 3, 3, 5)) {
         fmp_data_t *column_path = path_at(chunk, chunk->path_level-1);
         size_t column_index = path_value(chunk, column_path);
+        if (column_index == 0 || column_index > FMP_MAX_INDEX)
+            return CHUNK_NEXT;
         if (chunk->ref_simple == 16) {
             handle_column(column_index, &chunk->data, ctx);
         }

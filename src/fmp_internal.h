@@ -1,3 +1,7 @@
+/* Upper bound on table/column indexes read out of the file. Anything past
+ * this is corrupt input, not a database with that many columns. */
+#define FMP_MAX_INDEX 100000
+
 typedef enum {
     CHUNK_NEXT,
     CHUNK_DONE,
