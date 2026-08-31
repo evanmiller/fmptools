@@ -186,17 +186,17 @@ int table_path_match_start1(fmp_chunk_t *chunk, int depth, int val) {
     if (table_path_depth(chunk) != depth)
         return 0;
     if (chunk->version_num < 7)
-        return path_is(chunk, chunk->path[0], val);
-    return path_value(chunk, chunk->path[0]) >= 128 && path_is(chunk, chunk->path[1], val);
+        return path_is(chunk, path_at(chunk, 0), val);
+    return path_value(chunk, path_at(chunk, 0)) >= 128 && path_is(chunk, path_at(chunk, 1), val);
 }
 
 int table_path_match_start2(fmp_chunk_t *chunk, int depth, int val1, int val2) {
     if (table_path_depth(chunk) != depth)
         return 0;
     if (chunk->version_num < 7)
-        return path_is(chunk, chunk->path[0], val1) && path_is(chunk, chunk->path[1], val2);
-    return (path_value(chunk, chunk->path[0]) >= 128 &&
-            path_is(chunk, chunk->path[1], val1) && path_is(chunk, chunk->path[2], val2));
+        return path_is(chunk, path_at(chunk, 0), val1) && path_is(chunk, path_at(chunk, 1), val2);
+    return (path_value(chunk, path_at(chunk, 0)) >= 128 &&
+            path_is(chunk, path_at(chunk, 1), val1) && path_is(chunk, path_at(chunk, 2), val2));
 }
 
 chunk_status_t process_chunk(fmp_file_t *file, fmp_chunk_t *chunk,

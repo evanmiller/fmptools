@@ -25,3 +25,12 @@ size_t convert_scsu_to_utf8(
 int table_path_match_start1(fmp_chunk_t *chunk, int depth, int val);
 int table_path_match_start2(fmp_chunk_t *chunk, int depth, int val1, int val2);
 int path_is(fmp_chunk_t *chunk, fmp_data_t *path, uint64_t value);
+
+/* Bounds-checked accessor for the chunk path. Callers used to index
+ * chunk->path[N] directly without consulting path_level, which reads
+ * uninitialized pointers out of the file's path array. */
+static inline fmp_data_t *path_at(fmp_chunk_t *chunk, long i) {
+    if (i < 0 || (size_t)i >= (size_t)chunk->path_level)
+        return (fmp_data_t *)0;
+    return chunk->path[i];
+}

@@ -51,14 +51,14 @@ static chunk_status_t handle_column(size_t column_index, fmp_data_t *name, fmp_l
 }
 
 static chunk_status_t handle_chunk_list_columns_v3(fmp_chunk_t *chunk, fmp_list_columns_ctx_t *ctx) {
-    if (path_value(chunk, chunk->path[0]) > 3)
+    if (path_value(chunk, path_at(chunk, 0)) > 3)
         return CHUNK_DONE;
 
     if (chunk->type != FMP_CHUNK_FIELD_REF_SIMPLE)
         return CHUNK_NEXT;
 
     if (table_path_match_start2(chunk, 3, 3, 5)) {
-        fmp_data_t *column_path = chunk->path[chunk->path_level-1];
+        fmp_data_t *column_path = path_at(chunk, chunk->path_level-1);
         size_t column_index = path_value(chunk, column_path);
         if (chunk->ref_simple == 1) {
             return handle_column(column_index, &chunk->data, ctx);
@@ -79,15 +79,15 @@ static chunk_status_t handle_chunk_list_columns_v3(fmp_chunk_t *chunk, fmp_list_
 }
 
 static chunk_status_t handle_chunk_list_columns_v7(fmp_chunk_t *chunk, fmp_list_columns_ctx_t *ctx) {
-    if (path_value(chunk, chunk->path[0]) > ctx->target_table_index + 128)
+    if (path_value(chunk, path_at(chunk, 0)) > ctx->target_table_index + 128)
         return CHUNK_DONE;
-    if (path_value(chunk, chunk->path[0]) < ctx->target_table_index + 128)
+    if (path_value(chunk, path_at(chunk, 0)) < ctx->target_table_index + 128)
         return CHUNK_NEXT;
     if (chunk->type != FMP_CHUNK_FIELD_REF_SIMPLE)
         return CHUNK_NEXT;
 
     if (table_path_match_start2(chunk, 3, 3, 5)) {
-        fmp_data_t *column_path = chunk->path[chunk->path_level-1];
+        fmp_data_t *column_path = path_at(chunk, chunk->path_level-1);
         size_t column_index = path_value(chunk, column_path);
         if (chunk->ref_simple == 16) {
             handle_column(column_index, &chunk->data, ctx);
