@@ -66,7 +66,7 @@ static uint16_t offset_table(uint8_t x) {
 }
 
 static uint32_t extended_offset(uint8_t hbyte, uint8_t lbyte) {
-    return 10000 + 80 * ((hbyte & 0x1F) * 100 + lbyte);
+    return 0x10000 + 0x80 * (((hbyte & 0x1F) << 8) + lbyte);
 }
 
 /* Implementation of A Standard Compression Scheme for Unicode
@@ -127,7 +127,7 @@ size_t convert_scsu_to_utf8(
                 } else { errno = EINVAL; break; }
             } else if (c == UDX) {
                 if (*inbytesleft >= 2) {
-                    dynamic_window_offsets[active_window = ((c & 0xE0) >> 5)] =
+                    dynamic_window_offsets[active_window = ((src[0] & 0xE0) >> 5)] =
                         extended_offset(src[0], src[1]);
                     src += 2;
                     *inbytesleft -= 2;
@@ -172,7 +172,7 @@ size_t convert_scsu_to_utf8(
             } else { errno = EINVAL; break; }
         } else if (c == SDX) {
             if (*inbytesleft >= 2) {
-                dynamic_window_offsets[active_window = ((c & 0xE0) >> 5)] =
+                dynamic_window_offsets[active_window = ((src[0] & 0xE0) >> 5)] =
                     extended_offset(src[0], src[1]);
                 src += 2;
                 *inbytesleft -= 2;
