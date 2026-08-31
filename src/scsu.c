@@ -141,7 +141,13 @@ size_t convert_scsu_to_utf8(
                 } else { errno = EINVAL; break; }
             }
         } else if (shift) {
-            u = static_window_offsets[shift - SQ0] + c;
+            /* UTS #6: for SQn, a following byte of 0x00-0x7F quotes from the
+             * static window and 0x80-0xFF quotes from the dynamic window. */
+            int sq_window = shift - SQ0;
+            if (c < 0x80)
+                u = static_window_offsets[sq_window] + c;
+            else
+                u = dynamic_window_offsets[sq_window] + (c - 0x80);
             shift = 0;
         } else if (c == SCU) {
             unicode = 1;
