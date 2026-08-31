@@ -100,13 +100,13 @@ size_t convert_scsu_to_utf8(
 
     uint8_t shift = 0;
     uint8_t unicode = 0;
+    uint16_t high_surrogate = 0; /* carried across loop iterations */
     uint8_t active_window = 0;
     uint32_t last_u = 0; // Unicode code point
     errno = 0;
     while (*inbytesleft && *outbytesleft) {
         uint8_t c = *src++; *inbytesleft -= 1;
         uint32_t u = 0; // Unicode code point
-        uint16_t high_surrogate = 0; // For UTF-16 surrogate pairs
         if (unicode) {
             if (c == UQU) {
                 if (*inbytesleft >= 2) {
@@ -195,7 +195,7 @@ size_t convert_scsu_to_utf8(
 
         /* UTF-16 surrogate pair */
         if (u >= 0xDC00 && u <= 0xDFFF) {
-            u = (high_surrogate << 10) + (u & 0x3FF);
+            u = 0x10000 + (high_surrogate << 10) + (u & 0x3FF);
         } else if (u >= 0xD800 && u <= 0xDBFF) {
             high_surrogate = (u & 0x3FF);
             continue;
