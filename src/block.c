@@ -57,6 +57,13 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
     unsigned char c;
     while (p < block->payload + block->payload_len) {
         c = *p;
+        /* Codes 0xC0-0xFF appear to mirror the documented 0x00-0x3F codes with the two high bits
+           set, using identical framing. This file already relies on that for one case: 0xE0 is
+           handled alongside 0x20, and 0xE0 == 0x20 + 0xC0. Normalising here covers the rest of the
+           family instead of enumerating them one at a time. */
+        if (c >= 0xC0) {
+            c -= 0xC0;
+        }
         fmp_chunk_t *chunk = calloc(1, sizeof(fmp_chunk_t));
         chunk->code = c;
         if (c == 0x00) {
