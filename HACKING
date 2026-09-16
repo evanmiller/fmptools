@@ -263,12 +263,25 @@ Simple data
     1       1+2*(C-0x10)    Value (Bytes)
 
     Offset  Length  Value
-    0       1       (0x19 | 0x23)
-    1       1       Value (Bytes)        
+    0       1       (0x18 | 0x23)
+    1       1       N = Length (Integer)
+    2       N       Value (Bytes)
+
+    Offset  Length  Value
+    0       1       0x19
+    1       1       N = Length (Integer)
+    2       N       Value (Bytes)
+    2+N     1       Trailing value (Bytes)
 
     Offset  Length          Value
     0       1               0x1A <= C <= 0x1D
-    1       2*(C-0x19)      Value (Bytes)
+    1       1               N = Length (Integer)
+    2       N               Value (Bytes)
+    2+N     2*(C-0x19)      Trailing value (Bytes)
+
+Codes 0x18 through 0x1F appear to form a family whose key is length-prefixed
+(compare the fixed three-byte keys of 0x10 through 0x17). 0x18 is the member
+with no trailing value; 0x1E and 0x1F (below) carry a length-prefixed value.
 
 
 Simple key-value

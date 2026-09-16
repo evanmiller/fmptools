@@ -199,6 +199,19 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             p += 2;
             chunk->data.bytes = p;
             p += chunk->data.len;
+        } else if (c == 0x18) {
+            /* Length-prefixed payload; the 0x18-0x1F family carries a variable-length
+             * key, and 0x18 is the member with no trailing value. See issue #27. */
+            chunk->type = FMP_CHUNK_DATA_SIMPLE;
+            p++;
+            if (p >= end) {
+                retval = FMP_ERROR_DATA_EXCEEDS_SECTOR_SIZE;
+                free(chunk);
+                break;
+            }
+            chunk->data.len = *p++;
+            chunk->data.bytes = p;
+            p += chunk->data.len;
         } else if (c >= 0x19 && c <= 0x1D) {
             chunk->type = FMP_CHUNK_DATA_SIMPLE;
             p++;
