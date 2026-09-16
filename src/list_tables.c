@@ -38,24 +38,14 @@ static chunk_status_t handle_chunk_list_tables_v7(fmp_chunk_t *chunk, void *ctxp
     if (path_value(chunk, path_at(chunk, 0)) > 3)
         return CHUNK_DONE;
 
-    if (chunk->type != FMP_CHUNK_FIELD_REF_SIMPLE)
-        return CHUNK_NEXT;
-
-    if (path_is(chunk, path_at(chunk, 0), 3) && path_is(chunk, path_at(chunk, 1), 16) &&
-            path_is(chunk, path_at(chunk, 2), 5) && path_value(chunk, path_at(chunk, 3)) >= 128) {
-        /* The table name sits either directly under [3].[16].[5].[128+i] with
-         * simple ref 16, or one level deeper at [3].[16].[5].[128+i].[16] with
-         * simple ref 1. Newer versions of FileMaker write the latter. */
-        int is_name = (chunk->path_level == 4 && chunk->ref_simple == 16)
-            || (chunk->path_level == 5 && path_is(chunk, path_at(chunk, 4), 16)
-                    && chunk->ref_simple == 1);
-        if (!is_name)
+    int first = 0;
+    if (chunk->path_level >= 4 &&
+            path_is(chunk, path_at(chunk, 0), 3) && path_is(chunk, path_at(chunk, 1), 16) &&
+            path_is(chunk, path_at(chunk, 2), 5) && path_value(chunk, path_at(chunk, 3)) >= 128 &&
+            name_chunk(chunk, 4, &first)) {
+        size_t table_index = path_value(chunk, path_at(chunk, 3)) - 128;
+        if (table_index == 0 || table_index > FMP_MAX_INDEX)
             return CHUNK_NEXT;
-
-        uint64_t table_path_val = path_value(chunk, path_at(chunk, 3));
-        if (table_path_val < 128 || table_path_val - 128 > FMP_MAX_INDEX)
-            return CHUNK_NEXT;
-        size_t table_index = table_path_val - 128;
         fmp_table_array_t *array = ctx->array;
         if (table_index > array->count) {
             size_t old_count = array->count;
@@ -64,9 +54,7 @@ static chunk_status_t handle_chunk_list_tables_v7(fmp_chunk_t *chunk, void *ctxp
             memset(&array->tables[old_count], 0, (table_index - old_count) * sizeof(fmp_table_t));
         }
         fmp_table_t *current_table = array->tables + table_index - 1;
-        convert(ctx->file->converter, ctx->file->xor_mask,
-                current_table->utf8_name, sizeof(current_table->utf8_name),
-                chunk->data.bytes, chunk->data.len);
+        append_name(ctx->file, chunk, first, current_table->utf8_name, sizeof(current_table->utf8_name));
         current_table->index = table_index;
     }
     return CHUNK_NEXT;

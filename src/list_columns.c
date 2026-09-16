@@ -33,6 +33,17 @@ typedef struct fmp_list_columns_ctx_s {
     fmp_column_array_t *array;
 } fmp_list_columns_ctx_t;
 
+static fmp_column_t *column_at(size_t column_index, fmp_list_columns_ctx_t *ctx) {
+    fmp_column_array_t *array = ctx->array;
+    if (column_index > array->count) {
+        size_t old_num_columns = array->count;
+        array->count = column_index;
+        array->columns = realloc(array->columns, array->count * sizeof(fmp_column_t));
+        memset(&array->columns[old_num_columns], 0, (column_index - old_num_columns) * sizeof(fmp_column_t));
+    }
+    return array->columns + column_index - 1;
+}
+
 static chunk_status_t handle_column(size_t column_index, fmp_data_t *name, fmp_list_columns_ctx_t *ctx) {
     fmp_column_array_t *array = ctx->array;
     if (column_index > array->count) {
@@ -85,17 +96,15 @@ static chunk_status_t handle_chunk_list_columns_v7(fmp_chunk_t *chunk, fmp_list_
         return CHUNK_DONE;
     if (path_value(chunk, path_at(chunk, 0)) < ctx->target_table_index + 128)
         return CHUNK_NEXT;
-    if (chunk->type != FMP_CHUNK_FIELD_REF_SIMPLE)
-        return CHUNK_NEXT;
-
-    if (table_path_match_start2(chunk, 3, 3, 5)) {
-        fmp_data_t *column_path = path_at(chunk, chunk->path_level-1);
-        size_t column_index = path_value(chunk, column_path);
+    int first = 0;
+    if (chunk->path_level >= 4 && path_is(chunk, path_at(chunk, 1), 3) && path_is(chunk, path_at(chunk, 2), 5) &&
+            name_chunk(chunk, 4, &first)) {
+        size_t column_index = path_value(chunk, path_at(chunk, 3));
         if (column_index == 0 || column_index > FMP_MAX_INDEX)
             return CHUNK_NEXT;
-        if (chunk->ref_simple == 16) {
-            handle_column(column_index, &chunk->data, ctx);
-        }
+        fmp_column_t *current_column = column_at(column_index, ctx);
+        append_name(ctx->file, chunk, first, current_column->utf8_name, sizeof(current_column->utf8_name));
+        current_column->index = column_index;
     }
     return CHUNK_NEXT;
 }

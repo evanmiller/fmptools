@@ -38,3 +38,6 @@ static inline fmp_data_t *path_at(fmp_chunk_t *chunk, long i) {
         return (fmp_data_t *)0;
     return chunk->path[i];
 }
+
+int name_chunk(fmp_chunk_t *chunk, int node_level, int *first);
+void append_name(fmp_file_t *file, fmp_chunk_t *chunk, int first, char *utf8_name, size_t size);

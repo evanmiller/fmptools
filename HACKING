@@ -451,11 +451,18 @@ metadata can be found at [130].[3].[5].
 The semantics are slightly changed, as documented below. fmp12 appears to
 eliminate the Integer column type in favor of all Strings.
 
-[4].[1].[7].[X]: Metadata about the Xth table
+[3].[16].[5].[128+X]: Metadata about the Xth table
 
   [16] => Table name
 
 [128+X].[3].[5].[Y]: Metadata for the Yth column of the Xth table
+
+  [16] => Column name
+
+Names that need more than plain Latin-1 text (for example Japanese names) are
+not stored inline. Instead the metadata node has a sub-path [16] holding the
+name as a long value: key 0 carries formatting and keys 1, 2, ... carry the
+text, in the same way as long field values (below).
 
 [128+X].[5].[Y]: Yth record in the Xth table (Path Integer key, String value)
 

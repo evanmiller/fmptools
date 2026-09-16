@@ -205,8 +205,10 @@ chunk_status_t process_chunk(fmp_file_t *file, fmp_chunk_t *chunk,
     chunk->path_level = file->path_level;
     chunk->version_num = file->version_num;
     if (chunk->type == FMP_CHUNK_PATH_POP) {
-        if (file->path_level)
-            file->path_level--;
+        if (file->path_level) {
+            /* Clear the entry so handlers that look past the current depth see nothing */
+            file->path[--file->path_level] = NULL;
+        }
     }
     if (chunk->type == FMP_CHUNK_PATH_PUSH) {
         if (file->path_level + 1 > file->path_capacity)
@@ -219,6 +221,7 @@ chunk_status_t process_chunk(fmp_file_t *file, fmp_chunk_t *chunk,
 fmp_error_t process_chunk_chain(fmp_file_t *file, fmp_chunk_t *chunk,
         chunk_handler handle_chunk, void *user_ctx) {
     file->path_level = 0;
+    memset(file->path, 0, file->path_capacity * sizeof(fmp_data_t *));
     while (chunk) {
         chunk_status_t status = process_chunk(file, chunk, handle_chunk, user_ctx);
         if (status == CHUNK_ABORT)
@@ -253,6 +256,40 @@ static int first_leaf_block(fmp_file_t *file) {
             return i + 1;
     }
     return 2;
+}
+
+/* Names of tables and columns are stored either inline, as key 16 of the
+ * object's metadata node, or as a long value in sub-path [16] of that node,
+ * in segments keyed 1, 2, ... (key 0 holds formatting). node_level is the
+ * path level of the metadata node. Returns 1 if the chunk carries part of
+ * the name, and sets *first for the first part. */
+int name_chunk(fmp_chunk_t *chunk, int node_level, int *first) {
+    if (chunk->path_level == node_level) {
+        if (chunk->type == FMP_CHUNK_FIELD_REF_SIMPLE && chunk->ref_simple == 16) {
+            *first = 1;
+            return 1;
+        }
+        return 0;
+    }
+    if (chunk->path_level == node_level + 1 && path_is(chunk, path_at(chunk, node_level), 16)) {
+        if (chunk->type == FMP_CHUNK_FIELD_REF_SIMPLE && chunk->ref_simple >= 1) {
+            *first = (chunk->ref_simple == 1);
+            return 1;
+        }
+        if (chunk->type == FMP_CHUNK_DATA_SEGMENT && chunk->segment_index >= 1) {
+            *first = (chunk->segment_index == 1);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void append_name(fmp_file_t *file, fmp_chunk_t *chunk, int first, char *utf8_name, size_t size) {
+    size_t used = first ? 0 : strlen(utf8_name);
+    if (used + 1 >= size)
+        return;
+    convert(file->converter, file->xor_mask, utf8_name + used, size - used,
+            chunk->data.bytes, chunk->data.len);
 }
 
 fmp_error_t process_blocks(fmp_file_t *file,

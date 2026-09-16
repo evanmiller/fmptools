@@ -153,6 +153,7 @@ static chunk_status_t flush_value(fmp_read_values_ctx_t *ctx) {
 }
 
 static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *ctx) {
+    fmp_column_t *column = NULL;
     int long_string = 0;
     size_t column_index = 0;
     size_t repetition = 1;
@@ -177,6 +178,14 @@ static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *c
         }
     }
     if (column_index == 0) {
+        return CHUNK_NEXT;
+    }
+
+    column = &ctx->columns[column_index-1];
+
+    if (column->index == 0) {
+        /* No name was found for this column; consumers address columns by
+         * index and name, so there is nothing sensible to deliver */
         return CHUNK_NEXT;
     }
 
@@ -251,24 +260,25 @@ static chunk_status_t handle_chunk_read_values_v7(fmp_chunk_t *chunk, fmp_read_v
     if (chunk->type != FMP_CHUNK_FIELD_REF_SIMPLE && chunk->type != FMP_CHUNK_DATA_SEGMENT)
         return CHUNK_NEXT;
 
-    if (table_path_match_start2(chunk, 3, 3, 5)) {
-        fmp_data_t *column_path = path_at(chunk, chunk->path_level-1);
-        size_t column_index = path_value(chunk, column_path);
+    int first = 0;
+    if (chunk->path_level >= 4 && path_is(chunk, path_at(chunk, 1), 3) && path_is(chunk, path_at(chunk, 2), 5) &&
+            name_chunk(chunk, 4, &first)) {
+        size_t column_index = path_value(chunk, path_at(chunk, 3));
         if (column_index == 0 || column_index > FMP_MAX_INDEX)
             return CHUNK_NEXT;
         if (column_index > ctx->num_columns) {
+            size_t old_num_columns = ctx->num_columns;
             ctx->num_columns = column_index;
             ctx->columns = realloc(ctx->columns, ctx->num_columns * sizeof(fmp_column_t));
+            memset(&ctx->columns[old_num_columns], 0, (column_index - old_num_columns) * sizeof(fmp_column_t));
         }
         fmp_column_t *current_column = ctx->columns + column_index - 1;
-        if (chunk->ref_simple == 16) {
-            convert(ctx->file->converter, ctx->file->xor_mask,
-                    current_column->utf8_name, sizeof(current_column->utf8_name),
-                    chunk->data.bytes, chunk->data.len);
-            current_column->index = column_index;
-        }
+        append_name(ctx->file, chunk, first, current_column->utf8_name, sizeof(current_column->utf8_name));
+        current_column->index = column_index;
         return CHUNK_NEXT;
     }
+    if (table_path_match_start2(chunk, 3, 3, 5) || table_path_match_start2(chunk, 4, 3, 5))
+        return CHUNK_NEXT; /* other column metadata */
 
     return process_value(chunk, ctx);
 }
