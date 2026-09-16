@@ -54,7 +54,9 @@ fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *val
     }
     int rc = sqlite3_bind_text(ctx->insert_stmt, column->index, value, strlen(value), SQLITE_TRANSIENT);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error binding parameter: %s\n", sqlite3_errmsg(ctx->db));
+        fprintf(stderr, "Error binding parameter #%d (%s) in row #%d: %s\n",
+                column->index, column->utf8_name, row, sqlite3_errmsg(ctx->db));
+        fprintf(stderr, "Bound value: %s\n", value);
         return FMP_HANDLER_ABORT;
     }
     ctx->last_row = row;
