@@ -81,7 +81,9 @@ The header begins with a 15-byte magic number:
      00 01 00 00  00 02 00 01  00 05 00 02  00 02 C0
 
 In fmp12, the magic number is followed by the ASCII sequence "HBAM7". This
-sequence can be used to distinguish fp5 files from fmp12 files.
+sequence can be used to distinguish fp5 files from fmp12 files. Files that
+have been encrypted with FileMaker's Encryption at Rest carry "HBAMe" instead,
+and their sectors are ciphertext; these tools cannot read them.
 
 The name of the software that created the file can be found at byte offset
 541 in the header. This string is a Pascal string, consisting of a one-byte

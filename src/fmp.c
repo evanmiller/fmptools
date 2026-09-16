@@ -85,6 +85,11 @@ fmp_error_t read_header(fmp_file_t *ctx) {
         return FMP_ERROR_BAD_MAGIC_NUMBER;
     }
 
+    if (memcmp(&buf[15], "HBAMe", 5) == 0) {
+        /* Encrypted (Encryption at Rest); the sectors are ciphertext */
+        return FMP_ERROR_ENCRYPTED_FILE;
+    }
+
     if (memcmp(&buf[15], "HBAM7", 5) == 0) {
         // or 4096
         ctx->sector_size = 4096;

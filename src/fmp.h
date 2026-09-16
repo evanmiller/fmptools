@@ -46,6 +46,7 @@ typedef enum {
     FMP_ERROR_UNRECOGNIZED_CODE,
     FMP_ERROR_UNSUPPORTED_CHARACTER_SET,
     FMP_ERROR_USER_ABORTED,
+    FMP_ERROR_ENCRYPTED_FILE,
 } fmp_error_t;
 
 typedef enum {
