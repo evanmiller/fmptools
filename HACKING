@@ -450,4 +450,16 @@ eliminate the Integer column type in favor of all Strings.
 
 [128+X].[5].[Y]: Yth record in the Xth table (Path Integer key, String value)
 
+  Keys are column indexes. A two-byte key whose value exceeds the column count
+  addresses one repetition of a repeating field: the first byte is the column
+  index and the second byte is the repetition number, starting at 2. The first
+  repetition uses the plain column key. fmp_read_values joins the repetitions
+  of a field with the ASCII group separator (0x1D), as FileMaker does when it
+  exports them.
+
+[128+X].[5].[Y].[Z]: Long value of the Zth column of the Yth record, stored
+  as a sequence of chunks whose keys or segment indexes are ordinals. Key 0
+  holds rich-text formatting. Z can also be a (column, repetition) pair as
+  described above.
+
 Note that the sequence of tables is not necessarily compact.
