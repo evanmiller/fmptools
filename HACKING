@@ -413,7 +413,10 @@ No-op
 ~~
 
     Offset  Length  Value
-    0       1       0x80
+    0       1       (0x80 | 0x88)
+
+0x88 has been observed once, in a leaf sector; reading it as a no-op parses
+that sector to its end with a structure matching its neighbours.
 
 
 

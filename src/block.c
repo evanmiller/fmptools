@@ -315,7 +315,10 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
         } else if (c == 0x3d || c == 0x40) {
             chunk->type = FMP_CHUNK_PATH_POP;
             p++;
-        } else if (c == 0x80) {
+        } else if (c == 0x80 || c == 0x88) {
+            /* 0x88 was seen once, in a leaf block of one file; treating it as a
+             * no-op parses that block to its end with a structure that mirrors
+             * its neighbours, while consuming any payload does not. */
             p++;
             free(chunk);
             continue;
