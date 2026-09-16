@@ -39,6 +39,7 @@ static uint64_t copy_int(const void *buf, size_t int_len) {
     return 0;
 }
 
+// Is this LEB128?
 static uint64_t copy_path_int(const void *buf, size_t int_len) {
     const uint8_t *chars = (const uint8_t *)buf;
     if (int_len == 1)
@@ -55,10 +56,16 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
     unsigned char *end = block->payload + block->payload_len;
     fmp_error_t retval = FMP_OK;
     unsigned char c;
+    int delayed_pops = 0;
     while (p < block->payload + block->payload_len) {
         c = *p;
         fmp_chunk_t *chunk = calloc(1, sizeof(fmp_chunk_t));
         chunk->code = c;
+        if ((c & 0xC0) == 0xC0) {
+            c &= 0x3F;
+            delayed_pops++;
+            chunk->code = c;
+        }
         if (c == 0x00) {
             chunk->type = FMP_CHUNK_DATA_SIMPLE;
             p++;
@@ -212,6 +219,18 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             chunk->data.len = *p++;
             chunk->data.bytes = p;
             p += chunk->data.len;
+        } else if (c == 0x1B && !p[1]) {
+            chunk->type = FMP_CHUNK_FIELD_REF_SIMPLE;
+            p += 2;
+            if (p >= end) {
+                retval = FMP_ERROR_DATA_EXCEEDS_SECTOR_SIZE;
+                free(chunk);
+                break;
+            }
+            chunk->ref_simple = *p++;
+            chunk->data.bytes = p;
+            chunk->data.len = 4;
+            p += chunk->data.len;
         } else if (c >= 0x19 && c <= 0x1D) {
             chunk->type = FMP_CHUNK_DATA_SIMPLE;
             p++;
@@ -262,7 +281,7 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             p += 2;
             chunk->data.bytes = p;
             p += chunk->data.len;
-        } else if (c == 0x20 || c == 0xE0) {
+        } else if (c == 0x20) {
             chunk->type = FMP_CHUNK_PATH_PUSH;
             p++;
             if (p >= end) {
@@ -335,6 +354,17 @@ static fmp_error_t process_block_v7(fmp_block_t *block) {
             first_chunk = chunk;
         }
         last_chunk = chunk;
+
+        while (delayed_pops) {
+            chunk = calloc(1, sizeof(fmp_chunk_t));
+            chunk->type = FMP_CHUNK_PATH_POP;
+            chunk->code = 0x40;
+
+            last_chunk->next = chunk;
+            last_chunk = chunk;
+
+            delayed_pops--;
+        }
     }
     if (p > block->payload + block->payload_len) {
         retval = FMP_ERROR_DATA_EXCEEDS_SECTOR_SIZE;

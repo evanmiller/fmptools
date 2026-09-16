@@ -114,6 +114,8 @@ static chunk_status_t dump_chunk(fmp_chunk_t *chunk, void *the_ctx) {
     }
     if (chunk->type == FMP_CHUNK_DATA_SEGMENT) {
         printf("-- segment #%d (%zu bytes) --\n", chunk->segment_index, chunk->data.len);
+        dump_data(chunk, &chunk->data, ctx);
+        printf(" --\n");
     }
     if (chunk->extended)
         printf("   => EXTENDED <= \n");

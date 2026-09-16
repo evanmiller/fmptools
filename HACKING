@@ -409,6 +409,16 @@ Path pop
     0       1       (0x3D | 0x40)
 
 
+Pop after chunk
+~~
+
+If the top two bits of a code byte are set (0xC0 <= C <= 0xFF), the chunk is
+decoded as if its code were (C & 0x3F), and a path pop is performed after it.
+For example, 0xE0 is a one-byte path push immediately followed by a pop, and
+0xC3 is a 0x03 key-value pair followed by a pop. These are common in index
+blocks, where each entry maps a path to a block number.
+
+
 No-op
 ~~
 

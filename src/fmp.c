@@ -213,6 +213,8 @@ chunk_status_t process_chunk(fmp_file_t *file, fmp_chunk_t *chunk,
         if (file->path_level) {
             /* Clear the entry so handlers that look past the current depth see nothing */
             file->path[--file->path_level] = NULL;
+        } else {
+            // debug("*** WARNING: path level empty ***\n");
         }
     }
     if (chunk->type == FMP_CHUNK_PATH_PUSH) {
@@ -235,6 +237,9 @@ fmp_error_t process_chunk_chain(fmp_file_t *file, fmp_chunk_t *chunk,
             break;
         if (status == CHUNK_NEXT)
             chunk = chunk->next;
+    }
+    if (file->path_level) {
+        // debug("*** WARNING: final path level is %d > 0 ***\n", file->path_level);
     }
     return FMP_OK;
 }
@@ -315,12 +320,10 @@ fmp_error_t process_blocks(fmp_file_t *file,
         retval = process_block(file, block);
         blocks_visited[next_block-1] = 1;
         if (retval != FMP_OK) {
-            /*
             fprintf(stderr, "ERROR processing block, reporting partial results...\n");
             block->this_id = next_block;
             if (!handle_block || handle_block(block, user_ctx))
                 process_chunk_chain(file, block->chunk, handle_chunk, user_ctx);
-                */
             break;
         }
         block->this_id = next_block;
