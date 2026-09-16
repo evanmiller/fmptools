@@ -241,6 +241,20 @@ void free_chunk_chain(fmp_block_t *block) {
     block->chunk = NULL;
 }
 
+/* Blocks form a B-tree. The data we read lives in the leaves (level 0), which
+ * are chained through next_id. The chain usually starts at block 2, but in
+ * some files block 2 is an index block, so locate the leaf with no predecessor. */
+static int first_leaf_block(fmp_file_t *file) {
+    if (file->version_num < 7)
+        return 2;
+    for (size_t i = 1; i < file->num_blocks; i++) {
+        fmp_block_t *block = file->blocks[i];
+        if (block && block->level == 0 && block->prev_id == 0)
+            return i + 1;
+    }
+    return 2;
+}
+
 fmp_error_t process_blocks(fmp_file_t *file,
         block_handler handle_block,
         chunk_handler handle_chunk,
@@ -252,7 +266,7 @@ fmp_error_t process_blocks(fmp_file_t *file,
     if (!handle_block || handle_block(block, user_ctx))
         process_chunk_chain(file, block->chunk, handle_chunk, user_ctx);
         */
-    int next_block = 2;
+    int next_block = first_leaf_block(file);
     int *blocks_visited = calloc(file->num_blocks, sizeof(int));
     do {
         fmp_block_t *block = file->blocks[next_block-1];

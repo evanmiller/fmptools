@@ -487,7 +487,11 @@ fmp_block_t *new_block_from_sector(fmp_file_t *file, const uint8_t *sector, fmp_
     fmp_block_t *block = calloc(1, sizeof(fmp_block_t) + payload_len);
     block->payload_len = payload_len;
     block->deleted = sector[0];
-    block->level = sector[1];
+    if (file->version_num >= 7) {
+        block->level = copy_int(&sector[12], 2);
+    } else {
+        block->level = sector[1];
+    }
     block->prev_id = copy_int(&sector[file->prev_sector_offset], 4);
     block->next_id = copy_int(&sector[file->next_sector_offset], 4);
     memcpy(&block->payload, &sector[file->sector_head_len], payload_len);

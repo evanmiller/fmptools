@@ -111,10 +111,19 @@ fmp12 sector layout:
 
     Offset  Length  Value
     0       1       Deleted? 1=Yes 0=No
-    1       1       Level = Integer
     4       4       Previous Sector ID = Integer
     8       4       Next Sector ID = Integer
+    12      2       Level = Integer
+    14      2       Unknown (possibly bytes used)
     20      4076    Payload
+
+Sectors form a B-tree. The "Level" is 0 for leaf sectors, which hold the data
+described below, 1 for index sectors, whose entries map paths to the numbers
+of the sectors beneath them, and 2 for the root (the first body sector). The
+sectors of each level are chained through the Previous/Next IDs. The leaf
+chain starts at the leaf sector with a Previous ID of 0; that is usually
+sector 2, but in some files sector 2 is an index sector and the first leaf
+lies elsewhere. Index sectors are not needed to read the data.
 
 The "Payload" is a byte-code stream that can be used to construct a series
 of data chunks. For our purpoes, there are six kinds of chunks:
