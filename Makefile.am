@@ -1,7 +1,7 @@
 AUTOMAKE_OPTIONS = foreign dist-zip
 
 lib_LTLIBRARIES = libfmptools.la
-noinst_PROGRAMS = fmpdump
+noinst_PROGRAMS = fmpdump fmpobjextract
 bin_PROGRAMS =
 include_HEADERS = src/fmp.h
 noinst_HEADERS = src/fmp_internal.h src/bin/usage.h
@@ -32,6 +32,9 @@ endif
 
 fmpdump_SOURCES = src/bin/fmpdump.c
 fmpdump_LDADD = libfmptools.la
+
+fmpobjextract_SOURCES = src/bin/fmpobjextract.c src/fmp.c src/block.c src/scsu.c
+fmpobjextract_LDADD = @LIBICONV@
 
 libfmptools_la_SOURCES = \
 	src/block.c \
