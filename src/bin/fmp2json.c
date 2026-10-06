@@ -86,6 +86,10 @@ fmp_handler_status_t handle_value(int row, fmp_column_t *column, const char *val
     return FMP_HANDLER_OK;
 }
 
+static void print_to_stream(void *stream, const char *str, size_t len) {
+    fwrite(str, len, 1, (FILE *)stream);
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 3) {
         print_usage_and_exit(argc, argv);
@@ -107,7 +111,18 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    FILE *stream = stdout;
+    if (strcmp(argv[2], "-")) {
+        stream = fopen(argv[2], "w");
+        if (!stream) {
+            fprintf(stderr, "Couldn't open file for writing: %s\n", argv[2]);
+            return 1;
+        }
+    }
+
+    /* Write the JSON as it is generated rather than building it in memory */
     yajl_gen_config(ctx.g, yajl_gen_beautify, 1);
+    yajl_gen_config(ctx.g, yajl_gen_print_callback, print_to_stream, stream);
 
     yajl_gen_array_open(g);
     for (int j=0; j<tables->count; j++) {
@@ -146,6 +161,11 @@ int main(int argc, char *argv[]) {
         error = fmp_read_values(file, table, &handle_value, &ctx);
         if (error != FMP_OK) {
             fprintf(stderr, "Error code: %d\n", error);
+            if (stream != stdout) {
+                /* Don't leave a truncated file behind */
+                fclose(stream);
+                remove(argv[2]);
+            }
             return 1;
         }
         if (ctx.last_row)
@@ -157,21 +177,8 @@ int main(int argc, char *argv[]) {
     yajl_gen_array_close(g);
     fmp_free_tables(tables);
     fmp_close_file(file);
-
-    FILE *stream = NULL;
-    if (strcmp(argv[2], "-")) {
-        stream = fopen(argv[2], "w");
-        if (!stream) {
-            fprintf(stderr, "Couldn't open file for writing: %s\n", argv[2]);
-            return 1;
-        }
-    }
-    const unsigned char * buf = NULL;
-    size_t len = 0;
-    yajl_gen_get_buf(g, &buf, &len);
-    fwrite(buf, len, 1, stream ? stream : stdout);
     yajl_gen_free(ctx.g);
-    if (stream)
+    if (stream != stdout)
         fclose(stream);
 
     return 0;
