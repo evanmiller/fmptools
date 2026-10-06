@@ -231,8 +231,10 @@ static chunk_status_t handle_chunk_read_values_v3(fmp_chunk_t *chunk, fmp_read_v
         if (column_index == 0 || column_index > FMP_MAX_INDEX)
             return CHUNK_NEXT;
         if (column_index > ctx->num_columns) {
+            size_t old_num_columns = ctx->num_columns;
             ctx->num_columns = column_index;
             ctx->columns = realloc(ctx->columns, ctx->num_columns * sizeof(fmp_column_t));
+            memset(&ctx->columns[old_num_columns], 0, (column_index - old_num_columns) * sizeof(fmp_column_t));
         }
         fmp_column_t *current_column = ctx->columns + column_index - 1;
         if (chunk->ref_simple == 1) {
