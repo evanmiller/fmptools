@@ -143,6 +143,12 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Error code: %d\n", error);
             return 1;
         }
+        if (!columns->count) {
+            /* SQLite can't create a table without columns */
+            fprintf(stderr, "Skipping table \"%s\": no columns\n", table->utf8_name);
+            fmp_free_columns(columns);
+            continue;
+        }
         size_t create_query_len = create_query_length(table, columns);
         size_t insert_query_len = insert_query_length(table, columns);
         create_query = realloc(create_query, create_query_len);
