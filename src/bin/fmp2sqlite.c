@@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
     for (int i=0; i<tables->count; i++) {
         fmp_table_t *table = &tables->tables[i];
         fmp_column_array_t *columns = fmp_list_columns(file, table, &error);
-        if (!columns) {
+        if (!columns || error != FMP_OK) {
             fprintf(stderr, "Error code: %d\n", error);
             return 1;
         }
@@ -201,7 +201,12 @@ int main(int argc, char *argv[]) {
         }
 
         fmp_sqlite_ctx_t ctx = { .db = db, .table_name = table->utf8_name, .insert_stmt = stmt };
-        fmp_read_values(file, table, &handle_value, &ctx);
+        error = fmp_read_values(file, table, &handle_value, &ctx);
+        if (error != FMP_OK) {
+            /* Don't insert the row that was being bound when reading stopped */
+            fprintf(stderr, "Error code: %d\n", error);
+            return 1;
+        }
         if (ctx.last_row) {
             int rc = sqlite3_step(stmt);
             if (rc != SQLITE_DONE) {
