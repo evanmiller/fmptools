@@ -324,11 +324,15 @@ fmp_error_t process_blocks(fmp_file_t *file,
             block->this_id = next_block;
             if (!handle_block || handle_block(block, user_ctx))
                 process_chunk_chain(file, block->chunk, handle_chunk, user_ctx);
+            free_chunk_chain(block);
             break;
         }
         block->this_id = next_block;
         if (!handle_block || handle_block(block, user_ctx))
             retval = process_chunk_chain(file, block->chunk, handle_chunk, user_ctx);
+        /* Parse the block again on the next pass instead of keeping every
+         * chain in memory, which takes several times the file size */
+        free_chunk_chain(block);
         next_block = block->next_id;
     } while (next_block != 0 && next_block - 1 < file->num_blocks &&
             !blocks_visited[next_block-1] && retval == FMP_OK);
