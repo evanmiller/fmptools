@@ -178,8 +178,18 @@ int main(int argc, char *argv[]) {
     fmp_free_tables(tables);
     fmp_close_file(file);
     yajl_gen_free(ctx.g);
+
+    /* Write errors such as a full disk only show up in the stream's error
+     * flag and in the final flush */
+    int failed = fflush(stream) != 0 || ferror(stream);
     if (stream != stdout)
-        fclose(stream);
+        failed = fclose(stream) != 0 || failed;
+    if (failed) {
+        fprintf(stderr, "Couldn't write output: %s\n", argv[2]);
+        if (stream != stdout)
+            remove(argv[2]);
+        return 1;
+    }
 
     return 0;
 }
