@@ -27,6 +27,10 @@ The tools installed to `$PREFIX/bin` include:
 * `fmp2json` - Convert a FileMaker Pro database to JSON (requires [yajl](https://lloyd.github.io/yajl/))
 * `fmp2sqlite` - Convert a FileMaker Pro database to SQLite (requires [sqlite](https://www.sqlite.org/index.html))
 
+All text is converted to UTF-8, and leading spaces are removed from every
+value and name. A value that consists only of spaces therefore comes out
+empty.
+
 There is also a C library installed that is used by the above tools, but the
 API is subject to change.
 
