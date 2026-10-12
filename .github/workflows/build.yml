@@ -8,10 +8,8 @@ jobs:
       matrix:
         compiler: [ clang, gcc, gcc-9, gcc-10, gcc-11 ]
     steps:
-      - name: Add repository
-        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
       - name: Install packages
-        run: sudo apt install gettext gcc-9 gcc-10 gcc-11 libyajl-dev libsqlite3-dev
+        run: sudo apt-get update && sudo apt-get install -y gettext gcc-9 gcc-10 gcc-11 libyajl-dev libsqlite3-dev
       - uses: actions/checkout@v4
       - name: Autoconf
         run: autoreconf -i -f
