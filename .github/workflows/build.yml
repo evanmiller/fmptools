@@ -23,6 +23,8 @@ jobs:
         run: ./fmp2json test/data/fp3/government.FP3 -
       - name: SQLite test
         run: ./fmp2sqlite test/data/fp3/government.FP3 government.sqlite
+      - name: FP5 long value test
+        run: ./fmp2json test/data/fp5/CAKUNITS.FP5 cakunits.json && grep -q "Widespread glacial" cakunits.json
   macos:
     runs-on: macos-latest
     strategy:
@@ -45,5 +47,7 @@ jobs:
         run: ./fmp2json test/data/fp3/government.FP3 -
       - name: SQLite test
         run: ./fmp2sqlite test/data/fp3/government.FP3 government.sqlite
+      - name: FP5 long value test
+        run: ./fmp2json test/data/fp5/CAKUNITS.FP5 cakunits.json && grep -q "Widespread glacial" cakunits.json
       - name: Excel test
         run: ./fmp2excel test/data/fp3/government.FP3 government.xlsx

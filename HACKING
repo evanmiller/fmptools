@@ -449,6 +449,15 @@ These column names are uppercase.
 
 [5].[X]: Xth record in the table (Path Integer key, String or Integer value)
 
+  Keys are column indexes. Indexes of 128 and above are stored as two-byte
+  references (chunk code 0x02) encoded like a two-byte path component, e.g.
+  0x80 0x8D for column 269.
+
+[5].[X].[Y]: Long value of the Yth column of the Xth record, stored as a
+  sequence of chunks whose keys are ordinals. Key 0 holds rich-text
+  formatting. The keys can also be two bytes long (e.g. 0x00 0x01), as plain
+  big-endian numbers.
+
 It appears that later paths located at [32] and up are references to external
 FileMaker files on the same hard drive.
 

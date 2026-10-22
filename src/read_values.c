@@ -175,6 +175,11 @@ static chunk_status_t process_value(fmp_chunk_t *chunk, fmp_read_values_ctx_t *c
         } else if (chunk->type == FMP_CHUNK_DATA_SEGMENT) {
             decode_column_key(chunk, chunk->segment_index, key_len_for_chunk(chunk),
                     ctx->num_columns, &column_index, &repetition);
+        } else if (chunk->type == FMP_CHUNK_FIELD_REF_LONG && chunk->version_num < 7 &&
+                chunk->ref_long.len == 2 && (chunk->ref_long.bytes[0] & 0x80)) {
+            /* fp3/fp5: column index >= 128, encoded like a two-byte path component */
+            decode_column_key(chunk, path_value(chunk, &chunk->ref_long), chunk->ref_long.len,
+                    ctx->num_columns, &column_index, &repetition);
         }
     }
     if (column_index == 0) {
@@ -222,7 +227,10 @@ static chunk_status_t handle_chunk_read_values_v3(fmp_chunk_t *chunk, fmp_read_v
     if (path_value(chunk, path_at(chunk, 0)) > 5)
         return CHUNK_DONE;
 
-    if (chunk->type != FMP_CHUNK_FIELD_REF_SIMPLE)
+    /* Two-byte references hold column indexes >= 128 and the segment numbers
+     * of long values */
+    if (chunk->type != FMP_CHUNK_FIELD_REF_SIMPLE &&
+            !(chunk->type == FMP_CHUNK_FIELD_REF_LONG && chunk->ref_long.len == 2))
         return CHUNK_NEXT;
 
     if (table_path_match_start2(chunk, 3, 3, 5)) {
